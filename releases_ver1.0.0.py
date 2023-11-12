@@ -1,9 +1,3 @@
-""" 複数MODを同時翻訳する """
-"""
-参考サイト 
-- Pythonでクリップボードにファイルをコピーする方法 (Windows). (2023). Retrieved 3 November 2023, from https://qiita.com/Rilm2525/items/5ef4b4e8552b71971ad4
-"""
-
 from tkinter.ttk import *
 from plyer import notification
 import tkinter as tk
