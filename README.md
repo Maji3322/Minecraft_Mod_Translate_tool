@@ -1,6 +1,6 @@
 
 
-# **MineCraft-Mod-Translate**
+# **MineCraft-Mod-Translate-Tool**
 マインクラフトjava版の一部のMODを以外を翻訳するリソースパックを作成できます。
 
 # 使い方  
