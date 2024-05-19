@@ -26,7 +26,7 @@ jobs:
           nuitka-version: main
           script-name: main.py
           onefile: true
-          windows-disable-console: true
+          disable-console: true
           windows-icon-from-ico: "resources/icon.ico"
           include-data-dir: "resources=resources"
 
