@@ -1,4 +1,4 @@
-name: Compile with Nuitka
+name: Compile with Nuitka and Release
 
 on:
   push:
@@ -17,28 +17,36 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11.9'
 
-      - name: Install Nuitka
-        run: |
-          python -m pip install --upgrade pip
-          pip install nuitka
-
-      - name: Install dependencies
-        run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Compile with Nuitka
-        run: |
-          nuitka --onefile --windows-disable-console --windows-icon-from-ico="resources/icon.ico" --include-data-dir=resources=resources main.py
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
+      - uses: Nuitka/Nuitka-Action@main
         with:
-          name: compiled-executable
-          path: |
-            Minecraft_Mod_Translate_too/mcmt.exe
+          nuitka-version: main
+          script-name: main.py
+          onefile: true
+          windows-disable-console: true
+          windows-icon-from-ico: "resources/icon.ico"
+          include-data-dir: "resources=resources"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: 'v1.0.0'
+          release_name: 'Release v1.0.0'
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/mcmt.exe
+          asset_name: mcmt.exe
+          asset_content_type: application/octet-stream
