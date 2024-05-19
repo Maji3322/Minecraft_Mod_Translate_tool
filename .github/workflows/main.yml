@@ -30,23 +30,24 @@ jobs:
           windows-icon-from-ico: "resources/icon.ico"
           include-data-dir: "resources=resources"
 
-      - name: Create Release
+      - name: Create release
         id: create_release
-        uses: actions/create-release@v1
+        uses: actions/create-release@v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: 'v1.0.0'
-          release_name: 'Release v1.0.0'
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/mcmt.exe
-          asset_name: mcmt.exe
-          asset_content_type: application/octet-stream
+          asset_path: ./build/main.exe
+          asset_name: main.exe
+          asset_content_type: application/zip
