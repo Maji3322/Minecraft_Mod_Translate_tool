@@ -2,7 +2,6 @@
 
 # このバージョンでは、モジュール化を行うことを目標とする。
 
-
 <予定している機能改善>
 ・全体の翻訳完了までの予想時間を表示
 ・modのなかにあるmodも翻訳できるようにしたい。(aaa.jar/META-INF/jars/xxx.jar/assets/yyy/lang/en_us.json)
