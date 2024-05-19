@@ -7,7 +7,6 @@
 ・全体の翻訳完了までの予想時間を表示
 ・modのなかにあるmodも翻訳できるようにしたい。(aaa.jar/META-INF/jars/xxx.jar/assets/yyy/lang/en_us.json)
 ・自動アップデート機能
-・並列翻訳
 
 <バグ・不具合>
 ・ファイル名が長すぎると謎のエラーが起きてしまう...(try-exceptで回避したけども...)
