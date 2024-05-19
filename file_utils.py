@@ -44,7 +44,7 @@ def gen_pack_dir(pack_format, page, json_files):
                 f.write('''{{
     "pack": {{
         "pack_format": {pack_format},
-        "description": {asset_folders}を翻訳したリソースパックです。
+        "description": "{asset_folders}を翻訳したリソースパックです。"
     }}
 }}'''.format(pack_format=pack_format, asset_folders=asset_folders))
                 logger.info("LOG: translate_rp\\pack.mcmetaを生成しました。")
