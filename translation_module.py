@@ -65,6 +65,7 @@ def translate_json(lang_file_path, page):
 
                     try:
                         result = translator.translate(value, dest="ja")
+                        result.text = result.text.replace("％", "%")  # 翻訳結果の中に含まれる全角の%を半角に変換
                         ja_json[key] = result.text
                         translated_strings += 1
                         # ProgressBarをインクリメント
