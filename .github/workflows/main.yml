@@ -18,14 +18,33 @@ jobs:
         with:
           python-version: '3.11.9'
 
-      - uses: Nuitka/Nuitka-Action@main
+      - name: Cache Nuitka and ccache
+        uses: actions/cache@v4
         with:
-          nuitka-version: main
+          path: |
+            ~/.ccache
+            ~/.nuitka
+          key: ${{ runner.os }}-nuitka-ccache-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-nuitka-ccache-
+
+      - name: Install ccache
+        run: |
+          choco install ccache
+
+      - name: Configure Nuitka to use ccache
+        run: |
+          echo "export NUITKA_CCACHE_BINARY=$(which ccache)" >> $GITHUB_ENV
+
+      - name: Compile with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
           script-name: main.py
           onefile: true
-          disable-console: true
+          windows-disable-console: true
           windows-icon-from-ico: "resources/icon.ico"
           include-data-dir: "resources=resources"
+          follow-imports: true
 
       - name: Create release
         id: create_release
