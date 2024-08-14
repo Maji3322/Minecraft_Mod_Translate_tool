@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="resources/icon.png" />
+  <img src=".github/readme_assets/coverArt.png" />
 </p>
 
 # **MineCraft-Mod-Translate-Tool**
