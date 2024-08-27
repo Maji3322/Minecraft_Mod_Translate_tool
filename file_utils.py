@@ -7,6 +7,7 @@ import gui_module
 
 logger = logging.getLogger(__name__)
 
+
 def init_dir(path):
     """
     渡されたディレクトリを空っぽにし、その場所に同じファイルを作成する。
@@ -17,9 +18,10 @@ def init_dir(path):
     
     try:
         os.makedirs(path)
-    except:
-        logger.error(f"ERROR: {path}の初期化に失敗しました。")
-    return
+    except Exception as e:
+        logger.error("ERROR: %s ", e)
+        logger.error("ERROR: %s の初期化に失敗したと思われます。", path)
+
 
 def gen_pack_dir(pack_format, page, json_files):
     """
@@ -35,15 +37,15 @@ def gen_pack_dir(pack_format, page, json_files):
     asset_folders = str("、".join(asset_folders))
     
     # pack.mcmetaを生成
-    if not os.path.exists(os.path.join("translate_rp", "pack.mcmeta")): # pack.mcmetaが存在しない場合
-        with open(os.path.join("translate_rp", "pack.mcmeta"), "w+", encoding="utf-8") as f: # pack.mcmetaを作成
+    if not os.path.exists(os.path.join("translate_rp", "pack.mcmeta")):  # pack.mcmetaが存在しない場合
+        with open(os.path.join("translate_rp", "pack.mcmeta"), "w+", encoding="utf-8") as f:  # pack.mcmetaを作成
             if pack_format != "":
-                f.write('''{{
+                f.write(f'''{{
     "pack": {{
         "pack_format": {pack_format},
         "description": "{asset_folders}を翻訳したリソースパックです。"
     }}
-}}'''.format(pack_format=pack_format, asset_folders=asset_folders))
+}}''')
                 logger.info("LOG: translate_rp\\pack.mcmetaを生成しました。")
                 
                 # assetsフォルダを生成
@@ -53,6 +55,7 @@ def gen_pack_dir(pack_format, page, json_files):
                 gui_module.err_dlg(page, "エラー", "バージョンを選択してください。")
                 logger.error("ERROR: バージョンが指定されていません。")
                 return 1
+
 
 def lang_remove_other_files(path):
     """
@@ -71,19 +74,20 @@ def lang_remove_other_files(path):
                 os.remove(os.path.join(root, file))
             else:
                 # エラーメッセージをprintとloggerに出力
-                print(f"ERROR: {os.path.join(root, file)}は削除できませんでした。")
-                logger.error(f"ERROR: {os.path.join(root, file)}は削除できませんでした。")
-        for dir in dirs:
+                print("ERROR: %s は削除できませんでした。", os.path.join(root, file))
+                logger.error("ERROR: %s は削除できませんでした。", os.path.join(root, file))
+        for subdir in dirs:
             # langフォルダは削除しない
-            if dir != "lang":
-                shutil.rmtree(os.path.join(root, dir))
+            if subdir != "lang":
+                shutil.rmtree(os.path.join(root, subdir))
             else:
                 # エラーメッセージをprintとloggerに出力
-                print(f"ERROR: {os.path.join(root, dir)}は削除できませんでした。")
-                logger.error(f"ERROR: {os.path.join(root, dir)}は削除できませんでした。")
+                print("ERROR: %s は削除できませんでした。", os.path.join(root, subdir))
+                logger.error("ERROR: %s は削除できませんでした。", os.path.join(root, subdir))
+
 
 def unzip_jar(path: str):
-    """ 
+    """
     pathのjarファイルの名前でフォルダを作成し、その中にjarファイルを.zipを付けてコピーし、解凍する。
     Args:
         path (str): 解凍するjarファイルのパス
@@ -97,24 +101,26 @@ def unzip_jar(path: str):
     jar_folder = os.path.join("temp", os.path.splitext(os.path.basename(path))[0])
     try:
         os.makedirs(jar_folder)
-    except:
-        logger.error(f"ERROR: {jar_folder}の作成に失敗しました。")
+    except Exception as e:
+        logger.error("ERROR: %s ", e)
+        logger.error("ERROR: %s の作成に失敗したと思われます。", jar_folder)
         return
     
     # jarファイルをzipに変えてコピー
-    zip_path = os.path.join(jar_folder, os.path.basename(path) + ".zip")
-    shutil.copy(path, zip_path)
+    jar_folder_zip_path = os.path.join(jar_folder, os.path.basename(path) + ".zip")
+    shutil.copy(path, jar_folder_zip_path)
 
     # zipファイルを解凍
-    with zipfile.ZipFile(zip_path, "r") as zip:
-        print(f"unzip_jar: {zip_path}")
+    with zipfile.ZipFile(jar_folder_zip_path, "r") as zip:
+        print(f"unzip_jar: {jar_folder_zip_path}")
         try:
             zip.extractall(jar_folder)
-        except:
-            print(f"ERROR: {zip_path}の解凍に失敗しました。")
-            logger.error(f"ERROR: {zip_path}の解凍に失敗しました。")
+        except Exception as e:
+            logger.error("ERROR: %s ", e)
+            logger.error("ERROR: %s の解凍に失敗したと思われます。", jar_folder_zip_path)
 
     return
+
 
 def delete_files_except(root_dir, target_file_paths):
     """
@@ -135,13 +141,14 @@ def delete_files_except(root_dir, target_file_paths):
             if not any(file_path.startswith(dir_path) for file_path in target_file_paths):
                 shutil.rmtree(dir_path)
 
-    # Print the remaining files and folders
-    print('Remaining files and folders:')
+    # logに残っているファイルとフォルダを表示
+    logger.info("----------------残っているファイルとフォルダ----------------")
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for filename in filenames:
-            print(os.path.join(dirpath, filename))
+            logger.info(os.path.join(dirpath, filename))
         for dirname in dirnames:
-            print(os.path.join(dirpath, dirname))
+            logger.info(os.path.join(dirpath, dirname))
+
 
 def copy_assets_folders(root_dir, json_file_paths):
     """
@@ -166,7 +173,7 @@ def copy_assets_folders(root_dir, json_file_paths):
 
         # 既存のフォルダがある場合はマージする
         if os.path.exists(dest_dir):
-            for root, dirs, files in os.walk(src_assets_dir):
+            for root, _, files in os.walk(src_assets_dir):
                 for file in files:
                     src_file = os.path.join(root, file)
                     dst_file = os.path.join(dest_dir, os.path.relpath(src_file, src_assets_dir))
@@ -176,8 +183,10 @@ def copy_assets_folders(root_dir, json_file_paths):
         else:
             # 新規にフォルダをコピー
             shutil.copytree(src_assets_dir, dest_dir)
-            print(f"assets フォルダをコピーしました: {dest_dir}")
+            logger.info("assets フォルダをコピーしました: %s", dest_dir)
+
 
 if __name__ == "__main__":
     init_dir("temp")
     init_dir("translate_rp")
+
