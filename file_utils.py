@@ -181,4 +181,3 @@ def copy_assets_folders(root_dir, json_file_paths):
 if __name__ == "__main__":
     init_dir("temp")
     init_dir("translate_rp")
-    gen_pack_dir(6) # pack_formatはテスト用に6を指定

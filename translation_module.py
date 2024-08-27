@@ -154,11 +154,3 @@ def translate_in_thread(lang_file_paths, page):
     # メインスレッド以外を終了
     ThreadPoolExecutor().shutdown(wait=True)
     return 0
-
-
-
-
-
-if __name__ == "__main__":
-    ft.app(target=translate_json("test.json"))
-    
