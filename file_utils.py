@@ -1,14 +1,12 @@
 
 # NOTE: ファイルエディターを起動し、最終的には選択されたファイルのパスを返す。
 
-# NOTE: すべてのプログラムを実行する前に、環境を整える。
-
 import shutil, os, logging, zipfile
 import logging.handlers
 import gui_module
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
-
 
 def init_dir(path):
     """
@@ -53,7 +51,7 @@ def gen_pack_dir(pack_format, page, json_files):
                 os.makedirs(os.path.join("translate_rp", "assets"))
                 return 0
             else:
-                gui_module.err_dlg(page, "エラー","バージョンを選択してください。")
+                gui_module.err_dlg(page, "エラー", "バージョンを選択してください。")
                 logger.error("ERROR: バージョンが指定されていません。")
                 return 1
 
@@ -145,16 +143,6 @@ def delete_files_except(root_dir, target_file_paths):
             print(os.path.join(dirpath, filename))
         for dirname in dirnames:
             print(os.path.join(dirpath, dirname))
-
-
-import os
-import shutil
-from pathlib import Path
-
-import os
-import shutil
-from pathlib import Path
-import time
 
 def copy_assets_folders(root_dir, json_file_paths):
     """
