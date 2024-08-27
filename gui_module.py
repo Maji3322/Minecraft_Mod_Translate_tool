@@ -79,7 +79,8 @@ def select_file(e: ft.FilePickerResultEvent, page: ft.Page):
     
     global file_names
     file_paths = [file.path for file in e.files]  # ファイル選択ダイアログで選択されたファイルのパスを取得
-    file_names = list([os.path.basename(file_name) for file_name in file_paths]) # 選択されたファイルの名前を取得
+    selected_files_names = [os.path.basename(file_name) for file_name in file_paths]
+    file_names = list(selected_files_names)  # 選択されたファイルの名前を取得
     
     # ファイルのパスをボタンの右側に表示
     ft.Text(file_paths, width=300, style=ft.TextStyle(bgcolor="#2b2e31"))
@@ -114,8 +115,9 @@ def select_file_from_clipboard(page: ft.Page):
     if os.path.exists(mods_path):
         # modsフォルダーのパスが存在する場合、その中のjarファイルをリストとして取得
         try:
-            file_paths = [os.path.join(mods_path, file) for file in os.listdir(mods_path) if file.endswith(".jar")] # jarファイルのパスを取得
-            file_names = list([os.path.basename(file_name) for file_name in file_paths])         # 選択されたファイルの名前を取得
+            jar_file_paths = [os.path.join(mods_path, file) for file in os.listdir(mods_path) if file.endswith(".jar")]
+            file_paths = jar_file_paths  # jarファイルのパスを取得
+            file_names = list([os.path.basename(file_name) for file_name in file_paths])  # 選択されたファイルの名前を取得
         except: 
             # エラーになることはないが、念のためエラーメッセージを表示
             err_dlg(page, "エラー", "正式なファイルパスが渡されませんでした。")
