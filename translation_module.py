@@ -32,15 +32,19 @@ def translate_json(lang_file_path, page):
         # ファイルパスを正規化 ※正規化
         try:
             lang_file_path = os.path.normpath(lang_file_path)
+            if not os.path.exists(lang_file_path):
+                raise FileNotFoundError(f"ファイルが見つかりません: {lang_file_path}")
         except Exception as e:
-            logger.error("ERROR: %s の正規化に失敗しました。", lang_file_path)
-            logger.error("ERROR: %s ", e)
-            print(f"ERROR: {lang_file_path}の正規化に失敗しました。")
-            print(f"ERROR: {e}")
-            gui_module.err_dlg(page, "エラー",f"{lang_file_path}の正規化に失敗しました。")
+            logger.error("ERROR: %s の正規化または存在確認に失敗しました。", lang_file_path)
+            logger.error("ERROR: %s", e)
+            gui_module.err_dlg(page, "エラー", f"{lang_file_path}の正規化または存在確認に失敗しました。")
             return 1
         
-        with open(lang_file_path, "r+", encoding="utf-8") as f:  # それぞれの引数には、①ファイルのパス、②読み込みモード、③文字コードを指定
+        if not os.path.abspath(lang_file_path).startswith(os.path.abspath("temp")):
+            logger.error("CRITICAL: %s はtempフォルダ内のファイルではありません。", lang_file_path)
+            return 0
+        
+        with open(lang_file_path, "r+", encoding="utf-8") as f:
             def find_strings(json_data):
                 """
                 JSONデータ内の文字列を再帰的に検索して返す関数。
@@ -120,7 +124,7 @@ def translate_json(lang_file_path, page):
             
             logger.info("INFO: %s の翻訳が完了しました。", lang_file_path)
             logger.info("="*20)  # 終了を示すために区切り線を表示
-            info_msg.value = f"翻訳が完了しました。"
+            info_msg.value = "翻訳が完了しました。"
             
             
             return 0

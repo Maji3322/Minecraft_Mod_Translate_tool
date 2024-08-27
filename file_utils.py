@@ -111,10 +111,10 @@ def unzip_jar(path: str):
     shutil.copy(path, jar_folder_zip_path)
 
     # zipファイルを解凍
-    with zipfile.ZipFile(jar_folder_zip_path, "r") as zip:
+    with zipfile.ZipFile(jar_folder_zip_path, "r") as jar_zip:
         print(f"unzip_jar: {jar_folder_zip_path}")
         try:
-            zip.extractall(jar_folder)
+            jar_zip.extractall(jar_folder)
         except Exception as e:
             logger.error("ERROR: %s ", e)
             logger.error("ERROR: %s の解凍に失敗したと思われます。", jar_folder_zip_path)

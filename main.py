@@ -56,7 +56,7 @@ def process_app(file_paths, file_names, page):
         for f in file_paths:
             file_utils.unzip_jar(f)  # jarファイルをtempに解凍
 
-        json_files = glob.glob(validate_path(os.path.join("temp", '**', 'en_us.json')), recursive=True)
+        json_files = glob.glob(validate_path(os.path.join("temp", '**', 'en_us.json'), page), recursive=True)
         logger.info("json_files: %s ", json_files)
         file_utils.delete_files_except("temp", json_files)
         if file_utils.gen_pack_dir(str(gui_module.return_pack_format()), page, json_files) == 0:
@@ -77,7 +77,7 @@ def process_app(file_paths, file_names, page):
                 app_name="MC-MOD Translating tool",
                 app_icon="resources/icon.ico"
             )
-            gui_module.confirm_open_folder(page, "確認", "作成されたリソースパックのフォルダを開きますか？", subprocess.Popen(["explorer", os.path.dirname("translate_rp")], shell=True))
+            gui_module.confirm_open_folder(page, "確認", "作成されたリソースパックのフォルダを開きますか？", subprocess.Popen(["explorer", "translate_rp"]), check=True)
             def destroy(e):
                 page.window_destroy()
             destroy(None)
