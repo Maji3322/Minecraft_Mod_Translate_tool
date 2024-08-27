@@ -1,7 +1,5 @@
-
 # 指定したフォルダとその中身以外のファイルとフォルダを削除する、langフォルダの処理をするための関数
-import os, logging
-logger = logging.getLogger(__name__)
+import os
 
 
 def remove_other_files(path):
@@ -18,4 +16,3 @@ def remove_other_files(path):
         for f in files:
             if f != "pack.mcmeta":
                 os.remove(os.path.join(root, f))
-    return
