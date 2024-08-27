@@ -4,7 +4,6 @@
 import shutil, os, logging, zipfile
 import logging.handlers
 import gui_module
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
