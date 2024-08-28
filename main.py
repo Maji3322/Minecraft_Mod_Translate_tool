@@ -52,7 +52,7 @@ def cleanup_and_exit():
 
 def process_app(file_paths, file_names, page):
     try:
-        logger.info("LOG: ファイルの処理を開始: %s", file_names)
+        logger.info("INFO: ファイルの処理を開始: %s", file_names)
         for f in file_paths:
             file_utils.unzip_jar(f)  # jarファイルをtempに解凍
 
