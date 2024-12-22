@@ -20,16 +20,13 @@ def search_lang_file():
             ja_jp_json_path = os.path.join(os.path.dirname(i), "ja_jp.json")
             print(f"ja_jp_json_path: {ja_jp_json_path}")
             if not os.path.exists(ja_jp_json_path):
-                logger.info("LOG: en_us.jsonが見つかり、ja_jp.jsonがないため翻訳を開始します。")
+                logger.info("INFO: en_us.jsonが見つかり、ja_jp.jsonがないため翻訳を開始します。")
                 served_en_us_json_paths.append(i)
             else:
-                logger.info("LOG: ja_jp.jsonが見つかったので、翻訳をスキップします。")
+                logger.info("INFO: ja_jp.jsonが見つかったので、翻訳をスキップします。")
         else:
-            logger.info("LOG: langフォルダが見つからなかったので、翻訳をスキップします。")
+            logger.info("INFO: langフォルダが見つからなかったので、翻訳をスキップします。")
     return served_en_us_json_paths
-
-
-
 
 
 def search_jar_files():
@@ -40,6 +37,6 @@ def search_jar_files():
         None
     """
     jar_files = []
-    jar_files.append(glob.glob('temp/**/*.jar', recursive=True)) # tempフォルダの中からjarファイルを探してリストに追加
+    jar_files.append(glob.glob('temp/**/*.jar', recursive=True))  # tempフォルダの中からjarファイルを探してリストに追加
     print(jar_files)
     return jar_files
