@@ -1,4 +1,3 @@
-
 # NOTE: ファイルエディターを起動し、最終的には選択されたファイルのパスを返す。
 
 # NOTE: すべてのプログラムを実行する前に、環境を整える。
@@ -17,12 +16,13 @@ def init_dir(path):
     """
     if os.path.exists(path):
         shutil.rmtree(path)
-    
+
     try:
         os.makedirs(path)
     except:
         logger.error(f"ERROR: {path}の初期化に失敗しました。")
     return
+
 
 def gen_pack_dir(pack_format, page, json_files):
     """
@@ -31,31 +31,43 @@ def gen_pack_dir(pack_format, page, json_files):
     pack_format: リソースパックのバージョン番号を指定
     json_files: 翻訳対象のen_us.jsonファイルのパスのリスト
     """
-    
+
     # json_files に格納された各ファイルの2つ上の階層のフォルダの名前を取得
-    asset_folders = [os.path.basename(os.path.dirname(os.path.dirname(json_file))) for json_file in json_files]
+    asset_folders = [
+        os.path.basename(os.path.dirname(os.path.dirname(json_file)))
+        for json_file in json_files
+    ]
     # asset_foldersの各要素をカンマ区切りで結合して文字列にする(str)
     asset_folders = str("、".join(asset_folders))
-    
+
     # pack.mcmetaを生成
-    if not os.path.exists(os.path.join("translate_rp", "pack.mcmeta")): # pack.mcmetaが存在しない場合
-        with open(os.path.join("translate_rp", "pack.mcmeta"), "w+", encoding="utf-8") as f: # pack.mcmetaを作成
+    if not os.path.exists(
+        os.path.join("translate_rp", "pack.mcmeta")
+    ):  # pack.mcmetaが存在しない場合
+        with open(
+            os.path.join("translate_rp", "pack.mcmeta"), "w+", encoding="utf-8"
+        ) as f:  # pack.mcmetaを作成
             if pack_format != "":
-                f.write('''{{
+                f.write(
+                    """{{
     "pack": {{
         "pack_format": {pack_format},
         "description": "{asset_folders}を翻訳したリソースパックです。"
     }}
-}}'''.format(pack_format=pack_format, asset_folders=asset_folders))
+}}""".format(
+                        pack_format=pack_format, asset_folders=asset_folders
+                    )
+                )
                 logger.info("LOG: translate_rp\\pack.mcmetaを生成しました。")
-                
+
                 # assetsフォルダを生成
                 os.makedirs(os.path.join("translate_rp", "assets"))
                 return 0
             else:
-                gui_module.err_dlg(page, "エラー","バージョンを選択してください。")
+                gui_module.err_dlg(page, "エラー", "バージョンを選択してください。")
                 logger.error("ERROR: バージョンが指定されていません。")
                 return 1
+
 
 def lang_remove_other_files(path):
     """
@@ -75,7 +87,9 @@ def lang_remove_other_files(path):
             else:
                 # エラーメッセージをprintとloggerに出力
                 print(f"ERROR: {os.path.join(root, file)}は削除できませんでした。")
-                logger.error(f"ERROR: {os.path.join(root, file)}は削除できませんでした。")
+                logger.error(
+                    f"ERROR: {os.path.join(root, file)}は削除できませんでした。"
+                )
         for dir in dirs:
             # langフォルダは削除しない
             if dir != "lang":
@@ -83,10 +97,13 @@ def lang_remove_other_files(path):
             else:
                 # エラーメッセージをprintとloggerに出力
                 print(f"ERROR: {os.path.join(root, dir)}は削除できませんでした。")
-                logger.error(f"ERROR: {os.path.join(root, dir)}は削除できませんでした。")
+                logger.error(
+                    f"ERROR: {os.path.join(root, dir)}は削除できませんでした。"
+                )
+
 
 def unzip_jar(path: str):
-    """ 
+    """
     pathのjarファイルの名前でフォルダを作成し、その中にjarファイルを.zipを付けてコピーし、解凍する。
     Args:
         path (str): 解凍するjarファイルのパス
@@ -103,7 +120,7 @@ def unzip_jar(path: str):
     except:
         logger.error(f"ERROR: {jar_folder}の作成に失敗しました。")
         return
-    
+
     # jarファイルをzipに変えてコピー
     zip_path = os.path.join(jar_folder, os.path.basename(path) + ".zip")
     shutil.copy(path, zip_path)
@@ -118,6 +135,7 @@ def unzip_jar(path: str):
             logger.error(f"ERROR: {zip_path}の解凍に失敗しました。")
 
     return
+
 
 def delete_files_except(root_dir, target_file_paths):
     """
@@ -135,11 +153,13 @@ def delete_files_except(root_dir, target_file_paths):
                 os.remove(file_path)
         for dirname in dirnames:
             dir_path = os.path.join(dirpath, dirname)
-            if not any(file_path.startswith(dir_path) for file_path in target_file_paths):
+            if not any(
+                file_path.startswith(dir_path) for file_path in target_file_paths
+            ):
                 shutil.rmtree(dir_path)
 
     # Print the remaining files and folders
-    print('Remaining files and folders:')
+    print("Remaining files and folders:")
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for filename in filenames:
             print(os.path.join(dirpath, filename))
@@ -156,6 +176,7 @@ import shutil
 from pathlib import Path
 import time
 
+
 def copy_assets_folders(root_dir, json_file_paths):
     """
     json_file_paths に格納された各ファイルのassetsフォルダを
@@ -165,8 +186,8 @@ def copy_assets_folders(root_dir, json_file_paths):
         root_dir (str): ルートディレクトリのパス
         json_file_paths (list): json ファイルのパスのリスト
     """
-    translate_rp_dir = os.path.join(os.path.dirname(root_dir), 'translate_rp')
-    assets_dir = os.path.join(translate_rp_dir, 'assets')
+    translate_rp_dir = os.path.join(os.path.dirname(root_dir), "translate_rp")
+    assets_dir = os.path.join(translate_rp_dir, "assets")
     os.makedirs(assets_dir, exist_ok=True)
 
     for json_file_path in json_file_paths:
@@ -182,7 +203,9 @@ def copy_assets_folders(root_dir, json_file_paths):
             for root, dirs, files in os.walk(src_assets_dir):
                 for file in files:
                     src_file = os.path.join(root, file)
-                    dst_file = os.path.join(dest_dir, os.path.relpath(src_file, src_assets_dir))
+                    dst_file = os.path.join(
+                        dest_dir, os.path.relpath(src_file, src_assets_dir)
+                    )
                     os.makedirs(os.path.dirname(dst_file), exist_ok=True)
                     shutil.copy2(src_file, dst_file)
             print(f"assets フォルダをマージしました: {dest_dir}")
@@ -191,7 +214,8 @@ def copy_assets_folders(root_dir, json_file_paths):
             shutil.copytree(src_assets_dir, dest_dir)
             print(f"assets フォルダをコピーしました: {dest_dir}")
 
+
 if __name__ == "__main__":
     init_dir("temp")
     init_dir("translate_rp")
-    gen_pack_dir(6) # pack_formatはテスト用に6を指定
+    gen_pack_dir(6)  # pack_formatはテスト用に6を指定
