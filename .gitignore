@@ -1,7 +1,7 @@
-logs
-temp
-translate_rp
-__pycache__
+logs/
+temp/
+translate_rp/
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
