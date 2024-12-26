@@ -1,7 +1,13 @@
 # NOTE: ファイルエディターを起動し、最終的には選択されたファイルのパスを返す。
 
-import shutil, os, logging, zipfile
+# NOTE: すべてのプログラムを実行する前に、環境を整える。
+
+import logging
 import logging.handlers
+import os
+import shutil
+import zipfile
+
 import gui_module
 
 logger = logging.getLogger(__name__)
@@ -63,10 +69,8 @@ def gen_pack_dir(pack_format, page, json_files):
                 return 0
             else:
                 gui_module.err_dlg(page, "エラー", "バージョンを選択してください。")
-                gui_module.err_dlg(page, "エラー", "バージョンを選択してください。")
                 logger.error("ERROR: バージョンが指定されていません。")
                 return 1
-
 
 
 def lang_remove_other_files(path):
@@ -92,8 +96,8 @@ def lang_remove_other_files(path):
                 )
         for dir in dirs:
             # langフォルダは削除しない
-            if subdir != "lang":
-                shutil.rmtree(os.path.join(root, subdir))
+            if dir != "lang":
+                shutil.rmtree(os.path.join(root, dir))
             else:
                 # エラーメッセージをprintとloggerに出力
                 print(f"ERROR: {os.path.join(root, dir)}は削除できませんでした。")
@@ -103,7 +107,6 @@ def lang_remove_other_files(path):
 
 
 def unzip_jar(path: str):
-    """
     """
     pathのjarファイルの名前でフォルダを作成し、その中にjarファイルを.zipを付けてコピーし、解凍する。
     Args:
@@ -118,26 +121,24 @@ def unzip_jar(path: str):
     jar_folder = os.path.join("temp", os.path.splitext(os.path.basename(path))[0])
     try:
         os.makedirs(jar_folder)
-    except Exception as e:
-        logger.error("ERROR: %s ", e)
-        logger.error("ERROR: %s の作成に失敗したと思われます。", jar_folder)
+    except:
+        logger.error(f"ERROR: {jar_folder}の作成に失敗しました。")
         return
 
     # jarファイルをzipに変えてコピー
-    jar_folder_zip_path = os.path.join(jar_folder, os.path.basename(path) + ".zip")
-    shutil.copy(path, jar_folder_zip_path)
+    zip_path = os.path.join(jar_folder, os.path.basename(path) + ".zip")
+    shutil.copy(path, zip_path)
 
     # zipファイルを解凍
-    with zipfile.ZipFile(jar_folder_zip_path, "r") as jar_zip:
-        print(f"unzip_jar: {jar_folder_zip_path}")
+    with zipfile.ZipFile(zip_path, "r") as zip:
+        print(f"unzip_jar: {zip_path}")
         try:
-            jar_zip.extractall(jar_folder)
-        except Exception as e:
-            logger.error("ERROR: %s ", e)
-            logger.error("ERROR: %s の解凍に失敗したと思われます。", jar_folder_zip_path)
+            zip.extractall(jar_folder)
+        except:
+            print(f"ERROR: {zip_path}の解凍に失敗しました。")
+            logger.error(f"ERROR: {zip_path}の解凍に失敗しました。")
 
     return
-
 
 
 def delete_files_except(root_dir, target_file_paths):
@@ -165,19 +166,15 @@ def delete_files_except(root_dir, target_file_paths):
     print("Remaining files and folders:")
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for filename in filenames:
-            logger.info(os.path.join(dirpath, filename))
+            print(os.path.join(dirpath, filename))
         for dirname in dirnames:
-            logger.info(os.path.join(dirpath, dirname))
+            print(os.path.join(dirpath, dirname))
 
 
 import os
 import shutil
-from pathlib import Path
-
-import os
-import shutil
-from pathlib import Path
 import time
+from pathlib import Path
 
 
 def copy_assets_folders(root_dir, json_file_paths):
@@ -203,7 +200,7 @@ def copy_assets_folders(root_dir, json_file_paths):
 
         # 既存のフォルダがある場合はマージする
         if os.path.exists(dest_dir):
-            for root, _, files in os.walk(src_assets_dir):
+            for root, dirs, files in os.walk(src_assets_dir):
                 for file in files:
                     src_file = os.path.join(root, file)
                     dst_file = os.path.join(
