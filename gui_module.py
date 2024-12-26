@@ -3,11 +3,18 @@
 # NOTE: CTKからFletに移行する
 """
 
-import flet as ft, os, pyperclip, logging, webbrowser, time
+import logging
+import os
+import sys
+import time
+import webbrowser
+
+import flet as ft
+import pyperclip
+
 import main
 
 logger = logging.getLogger(__name__)
-
 
 
 def err_dlg(page: ft.Page, err_title: str, err_msg: str):
@@ -42,13 +49,10 @@ def err_dlg(page: ft.Page, err_title: str, err_msg: str):
 
 def end_dlg(page: ft.Page, end_msg: str):
     """
-    指定された確認メッセージを含む確認ダイアログを表示します。
+    指定されたエラーメッセージを含むエラーダイアログを表示します。
     Args:
-        page (ft.Page): 確認ダイアログが表示されるページオブジェクトです。
-        title (str): ダイアログのタイトルです。
-        msg (str): ダイアログに表示されるメッセージです。
-        on_click (function): ダイアログのボタンがクリックされたときに実行される関数です。
-    
+        page (ft.Page): エラーダイアログが表示されるページオブジェクトです。
+        err_msg (str): ダイアログに表示されるエラーメッセージです。
     """
 
     def close_dlg(e):  # eは使用しないが、仮の引数が必要
@@ -57,14 +61,14 @@ def end_dlg(page: ft.Page, end_msg: str):
         sys.exit(0)
 
     def dlg_open():
-        page.dialog = confirm_dlg
-        confirm_dlg.open = True
+        page.dialog = err_dlg
+        err_dlg.open = True
         page.update()
 
     err_dlg = ft.AlertDialog(
         title=ft.Text("翻訳完了"),
         modal=True,
-        content=ft.Text(msg),
+        content=ft.Text(end_dlg),
         actions=[
             ft.TextButton("閉じる", on_click=close_dlg),
         ],
@@ -105,13 +109,11 @@ def select_file(e: ft.FilePickerResultEvent, page: ft.Page):
     if not file_paths == []:  # ファイルが選択された場合
         main.process_app(file_paths, file_names, page)
     else:
-         # file_pathsが空の場合、エラーメッセージを表示して関数を終了
+        # file_pathsが空の場合、エラーメッセージを表示して関数を終了
         err_dlg(page, "エラー", "jarファイルが見つかりませんでした。")
 
 
-
 def select_file_from_clipboard(page: ft.Page):
-    """
     """
     pyperclipを使用してクリップボードからファイルパスを取得し、その中のjarファイルをリストとして取得する関数。
     取得したファイルパスはプリントされる。
@@ -127,7 +129,7 @@ def select_file_from_clipboard(page: ft.Page):
 
     # modsフォルダーのパスが存在するか確認
     if os.path.exists(mods_path):
-         # modsフォルダーのパスが存在する場合、その中のjarファイルをリストとして取得
+        # modsフォルダーのパスが存在する場合、その中のjarファイルをリストとして取得
         try:
             file_paths = [
                 os.path.join(mods_path, file)
@@ -151,7 +153,7 @@ def select_file_from_clipboard(page: ft.Page):
         # それぞれのファイルを解凍→assets直下を
         main.process_app(file_paths, file_names, page)
     else:
-         # file_pathsが空の場合、エラーメッセージを表示して関数を終了
+        # file_pathsが空の場合、エラーメッセージを表示して関数を終了
         err_dlg(page, "エラー", "フォルダの中にjarファイルが存在しませんでした。")
         return
 
@@ -183,7 +185,7 @@ def start_gui(
 
     # ドロップダウンの値が変更されたときに呼び出される関数
     def dropdown_changed(e):
-         # ドロップダウンの値が変更されたときに辞書に則ってpack_formatを取得する
+        # ドロップダウンの値が変更されたときに辞書に則ってpack_formatを取得する
         global pack_format
         pack_format = int(version_dict[dd.value])
         button1.visible = True
@@ -208,7 +210,7 @@ def start_gui(
             webbrowser.open("https://github.com/Maji3429/new-mc-mod-translating-tool")
             close_dlg
 
-         # ダイアログを表示して、リンクを開くか確認
+        # ダイアログを表示して、リンクを開くか確認
         dlg = ft.AlertDialog(
             title=ft.Text("GitHub"),
             content=ft.Text("GitHubのリンクを開きますか？"),
@@ -298,9 +300,7 @@ def start_gui(
     page.add(ft.Divider())
 
 
-
 def make_progress_bar(page: ft.Page, lang_file_path):
-    """
     """
     翻訳ファイル名とプログレスバーを表示する関数
 
@@ -352,7 +352,6 @@ def progress_bar_update(
     remaining_time = avg_time_per_string * remaining_strings
     show_info.value = f"翻訳中... 残り時間: {round(remaining_time)}秒"
     page.update()
-
 
 
 def return_pack_format():

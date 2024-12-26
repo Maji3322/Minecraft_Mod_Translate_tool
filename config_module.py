@@ -1,5 +1,6 @@
 # 指定したフォルダとその中身以外のファイルとフォルダを削除する、langフォルダの処理をするための関数
-import os, logging
+import logging
+import os
 
 logger = logging.getLogger(__name__)
 
