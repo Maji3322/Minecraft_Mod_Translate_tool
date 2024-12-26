@@ -1,8 +1,1 @@
-logs/
-temp/
-translate_rp/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
 .conda
