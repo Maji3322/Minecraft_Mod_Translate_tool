@@ -1,7 +1,5 @@
 # NOTE: ファイルエディターを起動し、最終的には選択されたファイルのパスを返す。
 
-# NOTE: すべてのプログラムを実行する前に、環境を整える。
-
 import logging
 import logging.handlers
 import os
@@ -23,8 +21,8 @@ def init_dir(path):
 
     try:
         os.makedirs(path)
-    except:
-        logger.error(f"ERROR: {path}の初期化に失敗しました。")
+    except OSError as e:
+        logger.error("%sの初期化に失敗しました。エラー: %s", path, str(e))
     return
 
 
@@ -44,6 +42,14 @@ def gen_pack_dir(pack_format, page, json_files):
     # asset_foldersの各要素をカンマ区切りで結合して文字列にする(str)
     asset_folders = str("、".join(asset_folders))
 
+    pack_mcmeta_content = f"""
+{{
+    "pack": {{
+        "pack_format": {pack_format},
+        "description": "{asset_folders}を翻訳したリソースパックです。"
+    }}
+    }}
+"""
     # pack.mcmetaを生成
     if not os.path.exists(
         os.path.join("translate_rp", "pack.mcmeta")
@@ -52,25 +58,25 @@ def gen_pack_dir(pack_format, page, json_files):
             os.path.join("translate_rp", "pack.mcmeta"), "w+", encoding="utf-8"
         ) as f:  # pack.mcmetaを作成
             if pack_format != "":
-                f.write(
-                    """{{
-    "pack": {{
-        "pack_format": {pack_format},
-        "description": "{asset_folders}を翻訳したリソースパックです。"
-    }}
-}}""".format(
-                        pack_format=pack_format, asset_folders=asset_folders
-                    )
-                )
-                logger.info("LOG: translate_rp\\pack.mcmetaを生成しました。")
+                f.write(pack_mcmeta_content)
+                logger.info("translate_rp\\pack.mcmetaを生成しました。")
 
                 # assetsフォルダを生成
                 os.makedirs(os.path.join("translate_rp", "assets"))
                 return 0
             else:
-                gui_module.err_dlg(page, "エラー", "バージョンを選択してください。")
-                logger.error("ERROR: バージョンが指定されていません。")
+                if page:
+                    gui_module.err_dlg(page, "エラー", "バージョンを選択してください。")
+                    logger.error("バージョンが指定されていません。")
                 return 1
+        # Ensure the directory and file are created even if pack_format is empty
+        os.makedirs(os.path.join("translate_rp", "assets"), exist_ok=True)
+        with open(
+            os.path.join("translate_rp", "pack.mcmeta"), "w+", encoding="utf-8"
+        ) as f:
+            f.write(pack_mcmeta_content)
+        logger.info("translate_rp\\pack.mcmetaを生成しました。")
+        return 0
 
 
 def lang_remove_other_files(path):
@@ -92,7 +98,7 @@ def lang_remove_other_files(path):
                 # エラーメッセージをprintとloggerに出力
                 print(f"ERROR: {os.path.join(root, file)}は削除できませんでした。")
                 logger.error(
-                    f"ERROR: {os.path.join(root, file)}は削除できませんでした。"
+                    "ERROR: %sは削除できませんでした。", os.path.join(root, file)
                 )
         for dir in dirs:
             # langフォルダは削除しない
@@ -102,43 +108,66 @@ def lang_remove_other_files(path):
                 # エラーメッセージをprintとloggerに出力
                 print(f"ERROR: {os.path.join(root, dir)}は削除できませんでした。")
                 logger.error(
-                    f"ERROR: {os.path.join(root, dir)}は削除できませんでした。"
+                    "ERROR: %sは削除できませんでした。", os.path.join(root, dir)
                 )
 
 
-def unzip_jar(path: str):
+def recursive_unzip_jar(path: str):
     """
-    pathのjarファイルの名前でフォルダを作成し、その中にjarファイルを.zipを付けてコピーし、解凍する。
+    0. `temp`フォルダがない場合は作成
+    2. その中にjarファイルを.zipを付けてコピーし、`temp`フォルダに解凍する。
+    3. modjar.jar/META-INF/jars/modjar2.jarというファイルがあり続ける限り、再帰的に解凍する。
     Args:
         path (str): 解凍するjarファイルのパス
+
+    Returns:
+        jar_folder (list): 解凍したファイルのパス
     """
 
-    print(f"path: {path}")
+    logger.info("%sを解凍します。", path)
+
     if not os.path.exists("temp"):
         os.mkdir("temp")
 
-    # 解凍先のフォルダ
-    jar_folder = os.path.join("temp", os.path.splitext(os.path.basename(path))[0])
-    try:
-        os.makedirs(jar_folder)
-    except:
-        logger.error(f"ERROR: {jar_folder}の作成に失敗しました。")
-        return
+    # 解凍先のフォルダを作成
+    jar_folder = os.path.join(
+        os.getcwd(), "temp", os.path.splitext(os.path.basename(path))[0]
+    )
 
-    # jarファイルをzipに変えてコピー
-    zip_path = os.path.join(jar_folder, os.path.basename(path) + ".zip")
+    # jarファイルをzipに変えてコピーを作成
+    zip_path = jar_folder + ".zip"
+
+    # 関数の引数にあるjarファイルを、作成したzip_pathの先にコピーする
+    logger.info("%sをコピーします。", path)
+    logger.info("コピー先: %s", zip_path)
     shutil.copy(path, zip_path)
 
-    # zipファイルを解凍
-    with zipfile.ZipFile(zip_path, "r") as zip:
+    # zipファイルを解凍。with文を使うと、ファイルを閉じる処理を自動で行ってくれる。(busy対策)
+    with zipfile.ZipFile(zip_path, "r") as zip_file:
         print(f"unzip_jar: {zip_path}")
         try:
-            zip.extractall(jar_folder)
-        except:
-            print(f"ERROR: {zip_path}の解凍に失敗しました。")
-            logger.error(f"ERROR: {zip_path}の解凍に失敗しました。")
+            zip_file.extractall(jar_folder)  # 解凍先をjar_folderに変更
+        except zipfile.BadZipFile as e:
+            print(f"ERROR: {zip_path}の解凍に失敗しました。\n{e}")
+            logger.error("%sの解凍に失敗しました。", zip_path)
+        except FileNotFoundError as e:
+            print(f"ERROR: {zip_path}が見つかりません。\n{e}")
+            logger.error("%sが見つかりません。", zip_path)
 
-    return
+    # zipファイルを削除
+    os.remove(zip_path)
+
+    # 解凍したフォルダの中の、META-INF/jarsフォルダの中にあるjarファイルを再帰的に解凍
+    more_jars = []
+    for root, _, files in os.walk(f"{jar_folder}/META-INF/jars"):
+        for file in files:
+            if file.endswith(".jar"):
+                more_jars.append(os.path.join(root, file))
+    # 再帰的に解凍
+    for jar in more_jars:
+        recursive_unzip_jar(jar)
+
+    return jar_folder
 
 
 def delete_files_except(root_dir, target_file_paths):
@@ -158,7 +187,8 @@ def delete_files_except(root_dir, target_file_paths):
         for dirname in dirnames:
             dir_path = os.path.join(dirpath, dirname)
             if not any(
-                file_path.startswith(dir_path) for file_path in target_file_paths
+                os.path.commonpath([file_path, dir_path]) == dir_path
+                for file_path in target_file_paths
             ):
                 shutil.rmtree(dir_path)
 
@@ -170,11 +200,7 @@ def delete_files_except(root_dir, target_file_paths):
         for dirname in dirnames:
             print(os.path.join(dirpath, dirname))
 
-
-import os
-import shutil
-import time
-from pathlib import Path
+    return
 
 
 def copy_assets_folders(root_dir, json_file_paths):
@@ -200,7 +226,7 @@ def copy_assets_folders(root_dir, json_file_paths):
 
         # 既存のフォルダがある場合はマージする
         if os.path.exists(dest_dir):
-            for root, dirs, files in os.walk(src_assets_dir):
+            for root, _, files in os.walk(src_assets_dir):
                 for file in files:
                     src_file = os.path.join(root, file)
                     dst_file = os.path.join(
@@ -218,4 +244,3 @@ def copy_assets_folders(root_dir, json_file_paths):
 if __name__ == "__main__":
     init_dir("temp")
     init_dir("translate_rp")
-    gen_pack_dir(6)  # pack_formatはテスト用に6を指定

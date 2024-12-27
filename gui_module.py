@@ -158,14 +158,19 @@ def select_file_from_clipboard(page: ft.Page):
         return
 
 
-def start_gui(
-    page: ft.Page,
-):  # この書き方はpageを引数に取ることで、pageを使ってGUIを構築することができる
-
-    # windowのサイズを設定
+def start_gui(page: ft.Page):
+    # ページの基本設定
     page.window_width = 1000
     page.window_height = 700
+    page.theme = ft.Theme(
+        color_scheme_seed="blue",
+        font_family="Noto Sans JP",
+    )
+    page.padding = 30
+    page.bgcolor = "#1a1c1e"
     page.update()
+
+    pack_format = None
 
     # バージョンごとのpack_formatを辞書にしておく
     version_dict = {
@@ -185,94 +190,112 @@ def start_gui(
 
     # ドロップダウンの値が変更されたときに呼び出される関数
     def dropdown_changed(e):
-        # ドロップダウンの値が変更されたときに辞書に則ってpack_formatを取得する
+        """ドロップダウンの値が変更されたときに呼び出される関数"""
         global pack_format
         pack_format = int(version_dict[dd.value])
+        # アニメーションでボタンを表示
         button1.visible = True
         button2.visible = True
+        button1.offset = ft.transform.Offset(0, 0)
+        button2.offset = ft.transform.Offset(0, 0)
         page.update()
 
-    # AppBarを追加
-
     def confirmOpenGitHub():
-        """
-        GitHubのリンクを開くか確認する関数
-        """
-
         def close_dlg(e):
             dlg.open = False
             page.update()
 
         def openGitHub(e):
-            """
-            GitHubのリンクを開く関数
-            """
             webbrowser.open("https://github.com/Maji3429/new-mc-mod-translating-tool")
-            close_dlg
+            close_dlg(e)
 
-        # ダイアログを表示して、リンクを開くか確認
         dlg = ft.AlertDialog(
-            title=ft.Text("GitHub"),
-            content=ft.Text("GitHubのリンクを開きますか？"),
+            modal=True,
+            title=ft.Text("GitHub", size=20),
+            content=ft.Container(
+                content=ft.Text("GitHubのリンクを開きますか？"),
+                padding=20,
+            ),
             actions=[
                 ft.TextButton("キャンセル", on_click=close_dlg),
-                ft.TextButton("開く", on_click=openGitHub),
+                ft.TextButton(
+                    "開く",
+                    on_click=openGitHub,
+                    style=ft.ButtonStyle(color="primary"),
+                ),
             ],
         )
         page.dialog = dlg
         dlg.open = True
         page.update()
 
+    # モダンなAppBarデザイン
     page.appbar = ft.AppBar(
-        leading=ft.Icon(ft.icons.G_TRANSLATE),
-        title=ft.Text("MC-MOD Translating tool"),
+        leading=ft.Icon(ft.icons.G_TRANSLATE, color="#4a9eff", size=30),
+        leading_width=40,
+        title=ft.Text(
+            "MC-MOD Translating tool",
+            size=24,
+            weight=ft.FontWeight.BOLD,
+            color="#ffffff",
+        ),
         center_title=True,
         bgcolor="#2b2e31",
+        elevation=2,
         actions=[
             ft.IconButton(
-                ft.icons.HELP,
+                ft.icons.HELP_OUTLINE,
+                icon_color="#4a9eff",
+                tooltip="このアプリについて",
                 on_click=lambda e: err_dlg(
                     page,
                     "このアプリについて",
                     "このアプリケーションは、MinecraftのMODを翻訳するためのツールです。一部翻訳できないMODがあります。",
                 ),
             ),
-            ft.IconButton(ft.icons.WEB, on_click=lambda e: confirmOpenGitHub()),
+            ft.IconButton(
+                ft.icons.CODE_ROUNDED,
+                icon_color="#4a9eff",
+                tooltip="GitHubを開く",
+                on_click=lambda e: confirmOpenGitHub(),
+            ),
         ],
     )
 
-    # バージョン選択のドロップダウンを追加
+    # スタイリッシュなドロップダウン
     dd = ft.Dropdown(
         on_change=dropdown_changed,
         label="MODの対応バージョン",
         width=300,
-        options=[
-            ft.dropdown.Option("1.13 ~ 1.14.4"),
-            ft.dropdown.Option("1.15 ~ 1.16.1"),
-            ft.dropdown.Option("1.16.2 ~ 1.16.5"),
-            ft.dropdown.Option("1.17 ~ 1.17.1"),
-            ft.dropdown.Option("1.18 ~ 1.18.2"),
-            ft.dropdown.Option("1.19 ~ 1.19.2"),
-            ft.dropdown.Option("1.19.3"),
-            ft.dropdown.Option("1.19.4"),
-            ft.dropdown.Option("1.20 ~ 1.20.1"),
-            ft.dropdown.Option("1.20.2"),
-            ft.dropdown.Option("1.20.3 ~ 1.20.4"),
-            ft.dropdown.Option("1.20.5 ~ 1.20.6"),
-        ],
+        border_color="#4a9eff",
+        focused_border_color="#4a9eff",
+        label_style=ft.TextStyle(color="#ffffff"),
+        text_style=ft.TextStyle(color="#ffffff"),
+        options=[ft.dropdown.Option(version) for version in version_dict.keys()],
     )
-    pick_file_dialog = ft.FilePicker(on_result=lambda result: select_file(result, page))
+
+    pick_file_dialog = ft.FilePicker(
+        on_result=lambda result: select_file(result, page)
+    )
     page.overlay.append(pick_file_dialog)
 
     global selected_files
-    selected_files = ft.Text()
+    selected_files = ft.Text(
+        color="#ffffff",
+        size=14,
+    )
 
-    # ファイルを選択するボタンと、クリップボードからファイルを選択するボタンを追加。左右に並べて表示する。
+    # アニメーション付きのボタン
     button1 = ft.TextButton(
         text="翻訳するMODのjarファイルを選択",
         icon=ft.icons.ATTACH_FILE,
-        style=ft.ButtonStyle(bgcolor="#2b2e31"),
+        style=ft.ButtonStyle(
+            bgcolor="#2b2e31",
+            color="#4a9eff",
+        ),
         visible=False,
+        offset=ft.transform.Offset(0, 0.5),  # 初期位置を下に
+        animate_offset=ft.animation.Animation(300, "easeOut"),
         on_click=lambda e: pick_file_dialog.pick_files(
             allow_multiple=True,
             initial_directory=os.path.expanduser("~\\Downloads"),
@@ -280,55 +303,127 @@ def start_gui(
             dialog_title="翻訳するMODのjarファイルを選択(複数選択可)",
         ),
     )
+
     button2 = ft.TextButton(
         text="クリップボードからパスを取得",
         icon=ft.icons.CONTENT_PASTE,
-        style=ft.ButtonStyle(bgcolor="#2b2e31"),
+        style=ft.ButtonStyle(
+            bgcolor="#2b2e31",
+            color="#4a9eff",
+        ),
         visible=False,
+        offset=ft.transform.Offset(0, 0.5),  # 初期位置を下に
+        animate_offset=ft.animation.Animation(300, "easeOut"),
         on_click=lambda e: select_file_from_clipboard(page),
     )
 
-    page.add(ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[dd]))
-    page.add(ft.Divider())  # 水平分割線を追加
+    # メインコンテンツをカードで囲む
+    main_content = ft.Card(
+        content=ft.Container(
+            padding=20,
+            content=ft.Column(
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=20,
+                controls=[
+                    dd,
+                    ft.Divider(color="#4a9eff", height=1),
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20,
+                        controls=[button1, button2],
+                    ),
+                    selected_files,
+                ],
+            ),
+        ),
+        elevation=5,
+    )
 
     page.add(
-        ft.Row(
-            alignment=ft.MainAxisAlignment.CENTER,
-            controls=[button1, button2, selected_files],
+        ft.Container(
+            margin=ft.margin.only(top=20),
+            content=main_content,
         )
     )
-    page.add(ft.Divider())
 
 
 def make_progress_bar(page: ft.Page, lang_file_path):
     """
-    翻訳ファイル名とプログレスバーを表示する関数
+    翻訳ファイル名とプログレスバーを表示する関数。
+    プログレスバーはカード内に横並びで表示され、複数ある場合はスクロール可能。
 
-    Args: page (ft.Page): ページオブジェクト
-            file_path (str): 翻訳するファイルのパス
+    Args:
+        page (ft.Page): ページオブジェクト
+        lang_file_path (str): 翻訳するファイルのパス
+
+    Returns:
+        tuple: (プログレスバー, 情報表示テキスト)
     """
-
-    pb = ft.ProgressBar(width=400)
-    show_info = ft.Text("翻訳中...")
-
-    # lang_file_pathの2つ上の階層のフォルダの名前を取得する
     file_name = os.path.basename(os.path.dirname(os.path.dirname(lang_file_path)))
+    
+    # プログレスバーとテキスト
+    pb = ft.ProgressBar(
+        width=300,
+        color="#4a9eff",
+        bgcolor="#2b2e31",
+    )
+    
+    show_info = ft.Text(
+        "翻訳中...",
+        color="#ffffff",
+        size=14,
+    )
 
-    """
-    page.add(
-        ft.Text(f"{file_name}: ", style="headlineSmall", width=400),
-        ft.Column([show_info, pb])
+    # 横並びレイアウト
+    progress_row = ft.Row(
+        controls=[
+            # MOD名
+            ft.Text(
+                f"{file_name}",
+                color="#ffffff",
+                size=16,
+                width=200,
+                weight=ft.FontWeight.BOLD,
+                text_align=ft.TextAlign.RIGHT,
+            ),
+            # 進捗状況
+            ft.Column(
+                controls=[
+                    show_info,
+                    pb,
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
     )
-    """
-    page.add(
-        ft.Row(
-            alignment=ft.MainAxisAlignment.CENTER,
-            controls=[
-                ft.Text(f"{file_name}: ", style="headlineSmall", width=400),
-                ft.Column([show_info, pb]),
-            ],
+
+    # カードでラップ
+    progress_card = ft.Card(
+        content=ft.Container(
+            content=progress_row,
+            padding=15,
+            border_radius=10,
+        ),
+        elevation=3,
+    )
+
+    # スクロール可能なコンテナがまだない場合は作成
+    if not hasattr(page, 'progress_container'):
+        page.progress_container = ft.Container(
+            content=ft.Column(
+                controls=[],
+                scroll=ft.ScrollMode.AUTO,
+                spacing=10,
+            ),
+            margin=ft.margin.only(top=20),
+            height=200,  # スクロール可能な高さを設定
         )
-    )
+        page.add(page.progress_container)
+
+    # 新しいプログレスカードを追加
+    page.progress_container.content.controls.append(progress_card)
+    page.update()
 
     return pb, show_info
 
