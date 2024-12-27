@@ -14,6 +14,7 @@ def search_lang_file():
     Returns:
         list: 翻訳対象のen_us.jsonファイルのパス。
     """
+    logger.info("search_lang_file関数を開始します。")
     en_us_json_paths = glob.glob("translate_rp/**/en_us.json", recursive=True)
     served_en_us_json_paths = []
     for i in en_us_json_paths:
@@ -26,7 +27,7 @@ def search_lang_file():
                 )
                 served_en_us_json_paths.append(i)
             else:
-                logger.info("LOG: ja_jp.jsonが見つかったので、翻訳をスキップします。")
+                logger.info("ja_jp.jsonが見つかったので、翻訳をスキップします。")
         else:
             logger.info(
                 "LOG: langフォルダが見つからなかったので、翻訳をスキップします。"
@@ -41,6 +42,7 @@ def search_jar_files():
     Args:
         None
     """
+    logger.info("search_jar_files関数を開始します。")
     jar_files = []
     jar_files.append(
         glob.glob("temp/**/*.jar", recursive=True)
