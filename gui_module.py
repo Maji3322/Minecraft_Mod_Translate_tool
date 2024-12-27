@@ -166,6 +166,9 @@ def start_gui(
     page.window_width = 1000
     page.window_height = 700
     page.update()
+    page.theme = ft.Theme(font_family="Noto Sans JP")
+    page.title = "MC-MOD Translating tool"
+    page.window_progress_bar = True  # プログレスバーを表示(どこに表示されるかはOSによる。Windowsだとタスクバーに表示される)
 
     # バージョンごとのpack_formatを辞書にしておく
     version_dict = {
@@ -228,6 +231,8 @@ def start_gui(
         title=ft.Text("MC-MOD Translating tool"),
         center_title=True,
         bgcolor="#2b2e31",
+        center_title=True,
+        force_material_transparency=True,
         actions=[
             ft.IconButton(
                 ft.icons.HELP,
