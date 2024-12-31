@@ -1,5 +1,6 @@
 # NOTE: ファイルエディターを起動し、最終的には選択されたファイルのパスを返す。
 
+import json
 import logging
 import logging.handlers
 import os
@@ -16,67 +17,77 @@ def init_dir(path):
     渡されたディレクトリを空っぽにし、その場所に同じファイルを作成する。
     path: str
     """
+    logger.info("%sを初期化します。", path)
+    print(f"{path}を初期化します。")
     if os.path.exists(path):
+        logger.debug("%sは存在します。削除します。", path)
         shutil.rmtree(path)
 
     try:
         os.makedirs(path)
+        logger.debug("%sを作成しました。", path)
     except OSError as e:
         logger.error("%sの初期化に失敗しました。エラー: %s", path, str(e))
     return
 
-
 def gen_pack_dir(pack_format, page, json_files):
     """
-    pack.mcmetaを生成し、assetsフォルダを生成することができたら0を返す。
-    バージョンが指定されていないときは、pack.mcmetaの生成を行わないで1を返す。
-    pack_format: リソースパックのバージョン番号を指定
-    json_files: 翻訳対象のen_us.jsonファイルのパスのリスト
+    pack.mcmetaを生成し、assetsフォルダを生成する関数。
+
+    Args:
+        pack_format (str): リソースパックのバージョン番号
+        page (ft.Page): ページオブジェクト
+        json_files (list): 翻訳対象のen_us.jsonファイルのパスのリスト
+
+    Returns:
+        int: 成功時は0、失敗時は1
     """
+    try:
+        if not pack_format:
+            logger.error("バージョンが指定されていません。")
+            if page:
+                gui_module.err_dlg(page, "エラー", "バージョンを選択してください。")
+            return 1
 
-    # json_files に格納された各ファイルの2つ上の階層のフォルダの名前を取得
-    asset_folders = [
-        os.path.basename(os.path.dirname(os.path.dirname(json_file)))
-        for json_file in json_files
-    ]
-    # asset_foldersの各要素をカンマ区切りで結合して文字列にする(str)
-    asset_folders = str("、".join(asset_folders))
+        # translate_rpディレクトリの初期化はprocess_app側で行うように変更
+        # logger.debug("translate_rpディレクトリを初期化します。")
+        # init_dir("translate_rp")
+        # logger.info("translate_rpディレクトリを初期化しました。")
 
-    pack_mcmeta_content = f"""
-{{
-    "pack": {{
-        "pack_format": {pack_format},
-        "description": "{asset_folders}を翻訳したリソースパックです。"
-    }}
-    }}
-"""
-    # pack.mcmetaを生成
-    if not os.path.exists(
-        os.path.join("translate_rp", "pack.mcmeta")
-    ):  # pack.mcmetaが存在しない場合
-        with open(
-            os.path.join("translate_rp", "pack.mcmeta"), "w+", encoding="utf-8"
-        ) as f:  # pack.mcmetaを作成
-            if pack_format != "":
-                f.write(pack_mcmeta_content)
-                logger.info("translate_rp\\pack.mcmetaを生成しました。")
-
-                # assetsフォルダを生成
-                os.makedirs(os.path.join("translate_rp", "assets"))
-                return 0
-            else:
-                if page:
-                    gui_module.err_dlg(page, "エラー", "バージョンを選択してください。")
-                    logger.error("バージョンが指定されていません。")
-                return 1
-        # Ensure the directory and file are created even if pack_format is empty
+        # assetsディレクトリを作成
         os.makedirs(os.path.join("translate_rp", "assets"), exist_ok=True)
+        logger.info("translate_rp/assetsディレクトリを確認しました。")
+
+        # asset_foldersの取得と結合
+        asset_folders = [
+            os.path.basename(os.path.dirname(os.path.dirname(json_file)))
+            for json_file in json_files
+        ]
+        asset_folders_str = "、".join(asset_folders)
+
+        # pack.mcmetaの内容を作成
+        pack_mcmeta_content = {
+            "pack": {
+                "pack_format": int(pack_format),
+                "description": f"{asset_folders_str}を翻訳したリソースパックです。",
+            }
+        }
+
+        # pack.mcmetaファイルを生成
         with open(
-            os.path.join("translate_rp", "pack.mcmeta"), "w+", encoding="utf-8"
+            os.path.join("translate_rp", "pack.mcmeta"), "w", encoding="utf-8"
         ) as f:
-            f.write(pack_mcmeta_content)
-        logger.info("translate_rp\\pack.mcmetaを生成しました。")
+            json.dump(pack_mcmeta_content, f, indent=4, ensure_ascii=False)
+            logger.info("pack.mcmetaファイルを生成しました。")
+
         return 0
+
+    except Exception as e:
+        error_msg = f"translate_rpフォルダの生成中にエラーが発生しました: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        if page:
+            gui_module.err_dlg(page, "エラー", error_msg)
+        return 1
 
 
 def lang_remove_other_files(path):
@@ -114,58 +125,78 @@ def lang_remove_other_files(path):
 
 def recursive_unzip_jar(path: str):
     """
-    0. `temp`フォルダがない場合は作成
-    2. その中にjarファイルを.zipを付けてコピーし、`temp`フォルダに解凍する。
-    3. modjar.jar/META-INF/jars/modjar2.jarというファイルがあり続ける限り、再帰的に解凍する。
+    jarファイルを再帰的に解凍する関数。META-INF/jars内のjarファイルも同様に処理する。
+
     Args:
         path (str): 解凍するjarファイルのパス
 
     Returns:
-        jar_folder (list): 解凍したファイルのパス
+        jar_folder (str): 解凍したファイルのパス
     """
+    if not os.path.exists(path):
+        logger.error("%sが見つかりません。スキップします。", path)
+        return None
 
     logger.info("%sを解凍します。", path)
 
+    # tempフォルダがない場合は作成
     if not os.path.exists("temp"):
         os.mkdir("temp")
 
-    # 解凍先のフォルダを作成
-    jar_folder = os.path.join(
-        os.getcwd(), "temp", os.path.splitext(os.path.basename(path))[0]
-    )
+    # 解凍先のフォルダを作成（ベースフォルダ）
+    base_name = os.path.splitext(os.path.basename(path))[0]
+    jar_folder = os.path.join(os.getcwd(), "temp", base_name)
+    os.makedirs(jar_folder, exist_ok=True)
 
-    # jarファイルをzipに変えてコピーを作成
-    zip_path = jar_folder + ".zip"
+    # jarファイルをzipとしてコピー
+    _, ext = os.path.splitext(path)
+    if ext.lower() == ".jar":
+        zip_path = jar_folder + ".zip"
+        shutil.copy2(path, zip_path)
+    else:
+        zip_path = path
 
-    # 関数の引数にあるjarファイルを、作成したzip_pathの先にコピーする
-    logger.info("%sをコピーします。", path)
-    logger.info("コピー先: %s", zip_path)
-    shutil.copy(path, zip_path)
+    # zipファイルを解凍
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zip_file:
+            print(f"unzip_jar: {zip_path}")
+            zip_file.extractall(jar_folder)
+    except (zipfile.BadZipFile, FileNotFoundError) as e:
+        logger.error("解凍エラー: %s - %s", zip_path, str(e))
+        return jar_folder
 
-    # zipファイルを解凍。with文を使うと、ファイルを閉じる処理を自動で行ってくれる。(busy対策)
-    with zipfile.ZipFile(zip_path, "r") as zip_file:
-        print(f"unzip_jar: {zip_path}")
-        try:
-            zip_file.extractall(jar_folder)  # 解凍先をjar_folderに変更
-        except zipfile.BadZipFile as e:
-            print(f"ERROR: {zip_path}の解凍に失敗しました。\n{e}")
-            logger.error("%sの解凍に失敗しました。", zip_path)
-        except FileNotFoundError as e:
-            print(f"ERROR: {zip_path}が見つかりません。\n{e}")
-            logger.error("%sが見つかりません。", zip_path)
+    # 一時的なzipファイルを削除
+    if ext.lower() == ".jar" and os.path.exists(zip_path):
+        os.remove(zip_path)
 
-    # zipファイルを削除
-    os.remove(zip_path)
+    # META-INF/jarsフォルダ内のjarファイルを処理
+    meta_jars_path = os.path.join(jar_folder, "META-INF", "jars")
+    if os.path.exists(meta_jars_path):
+        for root, _, files in os.walk(meta_jars_path):
+            for file in files:
+                if file.endswith(".jar"):
+                    inner_jar_path = os.path.join(root, file)
+                    try:
+                        # 内部jarファイル用の解凍先フォルダを短い名前で作成
+                        inner_base_name = os.path.splitext(file)[0][
+                            :30
+                        ]  # 名前を30文字に制限
+                        inner_jar_folder = os.path.join(
+                            jar_folder,
+                            f"__{inner_base_name}",  # プレフィックスを追加して区別
+                        )
+                        os.makedirs(inner_jar_folder, exist_ok=True)
 
-    # 解凍したフォルダの中の、META-INF/jarsフォルダの中にあるjarファイルを再帰的に解凍
-    more_jars = []
-    for root, _, files in os.walk(f"{jar_folder}/META-INF/jars"):
-        for file in files:
-            if file.endswith(".jar"):
-                more_jars.append(os.path.join(root, file))
-    # 再帰的に解凍
-    for jar in more_jars:
-        recursive_unzip_jar(jar)
+                        # 内部jarファイルを解凍
+                        with zipfile.ZipFile(inner_jar_path, "r") as inner_zip:
+                            print(f"解凍中(内部jar): {inner_jar_path}")
+                            inner_zip.extractall(inner_jar_folder)
+
+                    except (zipfile.BadZipFile, FileNotFoundError, OSError) as e:
+                        logger.error(
+                            "内部jar解凍エラー: %s - %s", inner_jar_path, str(e)
+                        )
+                        continue
 
     return jar_folder
 
@@ -242,5 +273,7 @@ def copy_assets_folders(root_dir, json_file_paths):
 
 
 if __name__ == "__main__":
-    init_dir("temp")
-    init_dir("translate_rp")
+    # ここでのinit_dir呼び出しを削除
+    # init_dir("temp")
+    # init_dir("translate_rp")
+    pass
