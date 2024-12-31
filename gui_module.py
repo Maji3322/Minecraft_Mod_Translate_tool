@@ -32,7 +32,9 @@ def err_dlg(page: ft.Page, err_title: str, err_msg: str):
     def dlg_open():
         page.dialog = err_dlg
         err_dlg.open = True
+        logger.debug(f"Page state before update: {page}")
         page.update()
+        logger.debug(f"Page state after update: {page}")
 
     err_dlg = ft.AlertDialog(
         title=ft.Text(err_title),
@@ -159,9 +161,38 @@ def select_file_from_clipboard(page: ft.Page):
 
 
 def start_gui(page: ft.Page):
+    """
+    GUIの初期設定を行う関数
+
+    Args:
+        page (ft.Page): ページオブジェクト
+
+    Returns:
+        None
+    """
     # ページの基本設定
-    page.window_width = 1000
-    page.window_height = 700
+    page.window.width = 1000
+    page.window.height = 700
+
+    try:
+        # 必要なモジュールを読み込む
+        # Nuitkaビルド後、exeファイルからパスを導き出す
+        if getattr(sys, "frozen", False):
+            # コンパイルされた実行ファイルがあるパスを取得
+            root_dir = os.path.dirname(sys.executable)
+        else:
+            # 通常のスクリプト実行時は__file__ベースでパスを取得
+            root_dir = os.path.abspath(os.path.dirname(__file__))
+        # アイコンファイルの絶対パスを作る
+        icon_path = os.path.join(root_dir, "resources", "icon.ico")
+        if os.path.exists(icon_path):
+            page.window.icon = icon_path
+            print(f"アイコンを設定しました: {icon_path}")
+        else:
+            print(f"警告: アイコンファイルが見つかりません: {icon_path}")
+    except Exception as e:
+        print(f"アイコン設定中にエラーが発生しました: {str(e)}")
+
     page.theme = ft.Theme(
         color_scheme_seed="blue",
         font_family="Noto Sans JP",
@@ -186,6 +217,8 @@ def start_gui(page: ft.Page):
         "1.20.2": 18,
         "1.20.3 ~ 1.20.4": 22,
         "1.20.5 ~ 1.20.6": 32,
+        "1.21 ~ 1.21.3": 35,
+        "1.21.4": 46,
     }
 
     # ドロップダウンの値が変更されたときに呼び出される関数
@@ -231,7 +264,7 @@ def start_gui(page: ft.Page):
 
     # モダンなAppBarデザイン
     page.appbar = ft.AppBar(
-        leading=ft.Icon(ft.icons.G_TRANSLATE, color="#4a9eff", size=30),
+        leading=ft.Icon(ft.Icons.G_TRANSLATE, color="#4a9eff", size=30),
         leading_width=40,
         title=ft.Text(
             "MC-MOD Translating tool",
@@ -244,7 +277,7 @@ def start_gui(page: ft.Page):
         elevation=2,
         actions=[
             ft.IconButton(
-                ft.icons.HELP_OUTLINE,
+                ft.Icons.HELP_OUTLINE,
                 icon_color="#4a9eff",
                 tooltip="このアプリについて",
                 on_click=lambda e: err_dlg(
@@ -254,7 +287,7 @@ def start_gui(page: ft.Page):
                 ),
             ),
             ft.IconButton(
-                ft.icons.CODE_ROUNDED,
+                ft.Icons.CODE_ROUNDED,
                 icon_color="#4a9eff",
                 tooltip="GitHubを開く",
                 on_click=lambda e: confirmOpenGitHub(),
@@ -274,9 +307,7 @@ def start_gui(page: ft.Page):
         options=[ft.dropdown.Option(version) for version in version_dict.keys()],
     )
 
-    pick_file_dialog = ft.FilePicker(
-        on_result=lambda result: select_file(result, page)
-    )
+    pick_file_dialog = ft.FilePicker(on_result=lambda result: select_file(result, page))
     page.overlay.append(pick_file_dialog)
 
     global selected_files
@@ -288,7 +319,7 @@ def start_gui(page: ft.Page):
     # アニメーション付きのボタン
     button1 = ft.TextButton(
         text="翻訳するMODのjarファイルを選択",
-        icon=ft.icons.ATTACH_FILE,
+        icon=ft.Icons.ATTACH_FILE,
         style=ft.ButtonStyle(
             bgcolor="#2b2e31",
             color="#4a9eff",
@@ -306,7 +337,7 @@ def start_gui(page: ft.Page):
 
     button2 = ft.TextButton(
         text="クリップボードからパスを取得",
-        icon=ft.icons.CONTENT_PASTE,
+        icon=ft.Icons.CONTENT_PASTE,
         style=ft.ButtonStyle(
             bgcolor="#2b2e31",
             color="#4a9eff",
@@ -346,6 +377,36 @@ def start_gui(page: ft.Page):
         )
     )
 
+    def page_resize(e):
+        """ウィンドウサイズ変更時にスクロール枠のサイズを更新"""
+        if hasattr(page, "progress_container"):
+            # スクロールコンテナの高さを更新
+            page.progress_container.height = page.window_height - 150
+            page.update()
+
+    # ウィンドウサイズ変更イベントのハンドラを設定
+    page.on_resize = page_resize
+
+
+def hide_selection_ui(page: ft.Page):
+    """
+    バージョン選択やファイル選択のUI要素を非表示にする関数
+
+    Args:
+        page (ft.Page): ページオブジェクト
+    """
+    # メインコンテンツを取得（最初のCard）
+    main_card = None
+    for control in page.controls:
+        if isinstance(control, ft.Container) and isinstance(control.content, ft.Card):
+            main_card = control
+            break
+
+    if main_card:
+        # メインカードを非表示
+        main_card.visible = False
+        page.update()
+
 
 def make_progress_bar(page: ft.Page, lang_file_path):
     """
@@ -360,14 +421,14 @@ def make_progress_bar(page: ft.Page, lang_file_path):
         tuple: (プログレスバー, 情報表示テキスト)
     """
     file_name = os.path.basename(os.path.dirname(os.path.dirname(lang_file_path)))
-    
+
     # プログレスバーとテキスト
     pb = ft.ProgressBar(
         width=300,
         color="#4a9eff",
         bgcolor="#2b2e31",
     )
-    
+
     show_info = ft.Text(
         "翻訳中...",
         color="#ffffff",
@@ -409,15 +470,19 @@ def make_progress_bar(page: ft.Page, lang_file_path):
     )
 
     # スクロール可能なコンテナがまだない場合は作成
-    if not hasattr(page, 'progress_container'):
+    if not hasattr(page, "progress_container"):
         page.progress_container = ft.Container(
             content=ft.Column(
                 controls=[],
                 scroll=ft.ScrollMode.AUTO,
                 spacing=10,
+                # 下部に余白を追加してスクロール時も見やすく
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            margin=ft.margin.only(top=20),
-            height=200,  # スクロール可能な高さを設定
+            margin=ft.margin.only(top=20, bottom=20),
+            # ウィンドウの高さからAppBarとマージンを引いた高さに設定
+            height=page.window_height - 150,  # AppBarの高さ(64px)+ 上下マージン(86px)
+            expand=True,  # コンテナを利用可能なスペースいっぱいに広げる
         )
         page.add(page.progress_container)
 
@@ -440,13 +505,21 @@ def progress_bar_update(
         show_info (ft.Text): 翻訳中のファイル名を表示するテキストオブジェクト
         page (ft.Page): ページオブジェクト
     """
-    pb.value = i / total_strings
-    elapsed_time = time.time() - start_time
-    avg_time_per_string = elapsed_time / i if i > 0 else 0
-    remaining_strings = total_strings - i
-    remaining_time = avg_time_per_string * remaining_strings
-    show_info.value = f"翻訳中... 残り時間: {round(remaining_time)}秒"
-    page.update()
+    try:
+        logger.info("Updating progress bar")
+        pb.value = i / total_strings
+        elapsed_time = time.time() - start_time
+        avg_time_per_string = elapsed_time / i if i > 0 else 0
+        remaining_strings = total_strings - i
+        remaining_time = avg_time_per_string * remaining_strings
+        show_info.value = f"翻訳中... 残り時間: {round(remaining_time)}秒"
+        logger.debug(f"Page state before update: {page}")
+        page.update()
+        logger.debug(f"Page state after update: {page}")
+        logger.info("Progress bar updated successfully")
+    except Exception as e:
+        logger.error(f"Error updating progress bar: {e}", exc_info=True)
+        raise
 
 
 def return_pack_format():
@@ -456,5 +529,123 @@ def return_pack_format():
     return int(pack_format)
 
 
-if __name__ == "__main__":
-    ft.app(target=start_gui, assets_dir="assets")
+def make_extract_progress(page: ft.Page):
+    """
+    jarファイルの解凍進捗を表示するUIを作成する関数。
+
+    Args:
+        page (ft.Page): ページオブジェクト
+
+    Returns:
+        tuple: (プログレスバー, 情報表示テキスト)
+    """
+    # プログレスバーとテキスト
+    pb = ft.ProgressBar(
+        width=300,
+        color="#4a9eff",
+        bgcolor="#2b2e31",
+    )
+
+    show_info = ft.Text(
+        "解凍中...",
+        color="#ffffff",
+        size=14,
+    )
+
+    # 進捗表示レイアウト
+    progress_row = ft.Row(
+        controls=[
+            # MOD解凍中の表示
+            ft.Text(
+                "MODファイル解凍中",
+                color="#ffffff",
+                size=16,
+                width=200,
+                weight=ft.FontWeight.BOLD,
+                text_align=ft.TextAlign.RIGHT,
+            ),
+            # 進捗状況
+            ft.Column(
+                controls=[
+                    show_info,
+                    pb,
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+    )
+
+    # カードでラップ
+    progress_card = ft.Card(
+        content=ft.Container(
+            content=progress_row,
+            padding=15,
+            border_radius=10,
+        ),
+        elevation=3,
+    )
+
+    # スクロール可能なコンテナを作成・更新
+    if not hasattr(page, "progress_container"):
+        page.progress_container = ft.Container(
+            content=ft.Column(
+                controls=[],
+                scroll=ft.ScrollMode.AUTO,
+                spacing=10,
+                # 下部に余白を追加してスクロール時も見やすく
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            margin=ft.margin.only(top=20, bottom=20),
+            # ウィンドウの高さからAppBarとマージンを引いた高さに設定
+            height=page.window_height - 150,  # AppBarの高さ(64px)+ 上下マージン(86px)
+            expand=True,  # コンテナを利用可能なスペースいっぱいに広げる
+        )
+        page.add(page.progress_container)
+
+    page.progress_container.content.controls.append(progress_card)
+    page.update()
+
+    return pb, show_info
+
+
+def update_extract_progress(
+    pb: ft.ProgressBar,
+    current: int,
+    total: int,
+    show_info,
+    page: ft.Page,
+    file_name: str,
+):
+    """
+    解凍進捗バーを更新する関数
+
+    Args:
+        pb (ft.ProgressBar): プログレスバーオブジェクト
+        current (int): 現在の処理ファイル番号
+        total (int): 総ファイル数
+        show_info (ft.Text): 情報表示テキストオブジェクト
+
+        page (ft.Page): ページオブジェクト
+        file_name (str): 現在処理中のファイル名
+    """
+    pb.value = current / total
+    show_info.value = f"解凍中... {file_name} ({current}/{total})"
+    page.update()
+
+
+def hide_extract_progress(page: ft.Page):
+    """
+    解凍進捗のプログレスバーを非表示にする関数
+
+    Args:
+
+        page (ft.Page): ページオブジェクト
+    """
+
+    if hasattr(page, "progress_container") and page.progress_container.content.controls:
+        # 最初のプログレスカード（解凍進捗）を非表示
+        extract_card = page.progress_container.content.controls[0]
+
+        page.progress_container.content.controls.remove(extract_card)
+        page.update()

@@ -1,6 +1,6 @@
 import json
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from venv import logger
 
 import tqdm
@@ -70,9 +70,9 @@ def translate_json(lang_file_path, page):
                         )
                         pbar.update(1)
                     except Exception as e:
-                        logger.error("ERROR: translation error >> %s", e)
+                        logger.error(f"Error translating {lang_file_path}: {e}", exc_info=True)
+                        gui_module.err_dlg(page, "エラー", f"{lang_file_path}の翻訳に失敗しました。")
                         raise RuntimeError("翻訳エラーが発生しました。") from e
-                    ja_json[key] = value
                 elif isinstance(value, dict):
                     ja_dict = {}
                     for sub_key, sub_value in value.items():
@@ -83,8 +83,9 @@ def translate_json(lang_file_path, page):
                                 translated_strings += 1
                                 pbar.update(1)
                             except Exception as e:
-                                logger.error("ERROR: translation error >> %s", e)
-                                ja_dict[sub_key] = sub_value
+                                logger.error(f"Error translating {lang_file_path}: {e}", exc_info=True)
+                                gui_module.err_dlg(page, "エラー", f"{lang_file_path}の翻訳に失敗しました。")
+                                raise RuntimeError("翻訳エラーが発生しました。") from e
                         else:
                             ja_dict[sub_key] = sub_value
                     ja_json[key] = ja_dict
@@ -98,13 +99,12 @@ def translate_json(lang_file_path, page):
 
             logger.info("%sの翻訳が完了しました。", lang_file_path)
             logger.info("=" * 20)
-            info_msg.value = f"翻訳が完了しました。{translated_strings}/{total_strings}文字翻訳しました。"
+            info_msg.value = (
+                f"完了：{translated_strings}/{total_strings}箇所を翻訳しました。"
+            )
             return 0
     except (json.JSONDecodeError, IOError, RuntimeError) as e:
-        logger.error("ERROR: %sの翻訳に失敗しました。", lang_file_path)
-        logger.error("ERROR: %s", e)
-        print(f"ERROR: {lang_file_path}の翻訳に失敗しました。")
-        print(f"ERROR: {e}")
+        logger.error(f"Error translating {lang_file_path}: {e}", exc_info=True)
         gui_module.err_dlg(page, "エラー", f"{lang_file_path}の翻訳に失敗しました。")
         return 1
 

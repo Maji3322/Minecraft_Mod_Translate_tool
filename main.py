@@ -18,6 +18,7 @@ import glob
 import logging.handlers
 import os
 import sys
+import time
 
 import flet as ft
 from googletrans import Translator
@@ -69,17 +70,43 @@ def process_app(file_paths, file_names, page):
     logger.info("file_names: %s", file_names)
     logger.info("page: %s", page)
 
+    # 翻訳開始前にUI要素を隠す
+    gui_module.hide_selection_ui(page)
+
+    # temp と translate_rp を同時に初期化
+    file_utils.init_dir("temp")
+    file_utils.init_dir("translate_rp")
+    logger.info("tempディレクトリとtranslate_rpディレクトリを同時に初期化しました。")
+
+    # 解凍進捗表示UI作成
+    extract_pb, extract_info = gui_module.make_extract_progress(page)
+    total_files = len(file_paths)
+
     unzipped_file_paths = []
-    for f in file_paths:
-        # ex) f = C:\Users\(username)\Downloads\Sodium.jar
-        unzipped_file_paths.append(
-            file_utils.recursive_unzip_jar(f)
-        )  # jarファイルをtempに解凍
+    for i, f in enumerate(file_paths):
+        # 進捗表示更新
+        current_file = i + 1
+        file_name = os.path.basename(f)
+        gui_module.update_extract_progress(
+            extract_pb, current_file, total_files, extract_info, page, file_name
+        )
+
+        # jarファイル解凍
+        unzipped_file_paths.append(file_utils.recursive_unzip_jar(f))
+
+    # 解凍完了表示の更新とプログレスバーの非表示
+    extract_info.value = "解凍完了"
+    page.update()
+    # 少し待機して完了メッセージを表示
+    time.sleep(1)
+    # 解凍進捗表示を非表示
+    gui_module.hide_extract_progress(page)
+
+    # 以降の処理（en_us.jsonファイルの検索など）を続行
 
     # tempの中からjarファイルを探し、またそれを解凍する。
     # 解凍したファイルのMETA-INFの中を探索し、その中のjarファイルを解凍する。
     # 解凍したファイルのMETA-INFの中にjarファイルが無くなるまで繰り返す。
-    # ということがしたかったのだが、うまくいかなかったので、一旦保留。一回だけ解凍することにする。
 
     # tempフォルダの中からlangファイルを探し、そのlangファイルのパス上にあるフォルダ以外のフォルダとファイルをtempから削除する
     # tempフォルダ内のすべてのサブディレクトリから英語の言語ファイルを検索
@@ -139,11 +166,23 @@ def process_app(file_paths, file_names, page):
         sys.exit(1)
 
 
-def main():
-    file_utils.init_dir("temp")
-    file_utils.init_dir("translate_rp")
-    ft.app(target=gui_module.start_gui, assets_dir="assets")
+def main(page: ft.Page):
+    """
+    メインアプリケーションのエントリーポイント
+    """
+    try:
+        logger.info("Initializing GUI")
+        logger.debug(f"Page state before GUI initialization: {page}")
+        from gui_module import start_gui  # 循環参照を避けるためにここでインポート
+
+        start_gui(page)
+        logger.debug(f"Page state after GUI initialization: {page}")
+        logger.info("GUI initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing GUI: {e}", exc_info=True)
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    # Fletアプリケーションの開始
+    ft.app(target=main, assets_dir="assets")
