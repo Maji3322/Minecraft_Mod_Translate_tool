@@ -16,6 +16,10 @@ def search_lang_file():
     """
     logger.info("search_lang_file関数を開始します。")
     en_us_json_paths = glob.glob("translate_rp/**/en_us.json", recursive=True)
+    if not en_us_json_paths:
+        logger.info("No lang folder found. Skipping translation.")
+        return "No lang folder"
+
     served_en_us_json_paths = []
     for i in en_us_json_paths:
         if i:
@@ -32,6 +36,11 @@ def search_lang_file():
             logger.info(
                 "LOG: langフォルダが見つからなかったので、翻訳をスキップします。"
             )
+
+    if not served_en_us_json_paths:
+        logger.info("All en_us.json have matching ja_jp.json. Skipping translation.")
+        return "exist ja_jp.json"
+
     return served_en_us_json_paths
 
 
