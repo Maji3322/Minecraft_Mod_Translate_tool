@@ -14,6 +14,18 @@ import pyperclip
 
 import main
 
+# カラーパレットの定義
+COLORS = {
+    'primary': '#5B8FF9',      # メインカラー（より鮮やかな青）
+    'background': '#1E1E2E',   # 背景色（より落ち着いた暗色）
+    'card': '#2A2A3C',        # カード背景（より深みのある色）
+    'text': '#FFFFFF',        # 文字色（白）
+    'secondary': '#334656',    # セカンダリーカラー（ボタン背景など）
+    'accent': '#6C7693',      # アクセントカラー
+    'divider': '#5B8FF9',     # 区切り線
+    'error': '#FF5555',       # エラー表示用
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -99,7 +111,7 @@ def select_file(e: ft.FilePickerResultEvent, page: ft.Page):
     )  # 選択されたファイルの名前を取得
 
     # ファイルのパスをボタンの右側に表示
-    ft.Text(file_paths, width=300, style=ft.TextStyle(bgcolor="#2b2e31"))
+    ft.Text(file_paths, width=300, style=ft.TextStyle(bgcolor=COLORS['background']))
     selected_files.value = (
         ", ".join(map(lambda f: f.name, e.files))
         if e.files
@@ -194,11 +206,11 @@ def start_gui(page: ft.Page):
         print(f"アイコン設定中にエラーが発生しました: {str(e)}")
 
     page.theme = ft.Theme(
-        color_scheme_seed="blue",
+        color_scheme_seed=COLORS['primary'],
         font_family="Noto Sans JP",
     )
     page.padding = 30
-    page.bgcolor = "#1a1c1e"
+    page.bgcolor = COLORS['background']
     page.update()
 
     pack_format = None
@@ -264,33 +276,44 @@ def start_gui(page: ft.Page):
 
     # モダンなAppBarデザイン
     page.appbar = ft.AppBar(
-        leading=ft.Icon(ft.Icons.G_TRANSLATE, color="#4a9eff", size=30),
+        leading=ft.Container(
+            content=ft.Icon(ft.Icons.G_TRANSLATE, color=COLORS['primary'], size=30),
+            padding=ft.padding.only(left=15),  # 左側に10ピクセルの余白を追加
+        ),
         leading_width=40,
         title=ft.Text(
-            "MC-MOD Translating tool",
+            "MC MOD Translator Tool",
             size=24,
             weight=ft.FontWeight.BOLD,
-            color="#ffffff",
+            color=COLORS['text'],
         ),
         center_title=True,
-        bgcolor="#2b2e31",
+        bgcolor=COLORS['card'],
         elevation=2,
         actions=[
-            ft.IconButton(
-                ft.Icons.HELP_OUTLINE,
-                icon_color="#4a9eff",
-                tooltip="このアプリについて",
-                on_click=lambda e: err_dlg(
-                    page,
-                    "このアプリについて",
-                    "このアプリケーションは、MinecraftのMODを翻訳するためのツールです。一部翻訳できないMODがあります。",
+            ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.IconButton(
+                            ft.Icons.HELP_OUTLINE,
+                            icon_color=COLORS['primary'],
+                            tooltip="このアプリについて",
+                            on_click=lambda e: err_dlg(
+                                page,
+                                "このアプリについて",
+                                "このアプリケーションは、MinecraftのMODを翻訳するためのツールです。一部翻訳できないMODがあります。",
+                            ),
+                        ),
+                        ft.IconButton(
+                            ft.Icons.CODE_ROUNDED,
+                            icon_color=COLORS['primary'],
+                            tooltip="GitHubを開く",
+                            on_click=lambda e: confirmOpenGitHub(),
+                        ),
+                    ],
+                    spacing=0,
                 ),
-            ),
-            ft.IconButton(
-                ft.Icons.CODE_ROUNDED,
-                icon_color="#4a9eff",
-                tooltip="GitHubを開く",
-                on_click=lambda e: confirmOpenGitHub(),
+                padding=ft.padding.only(right=10),  # 右側に20ピクセルの余白を追加
             ),
         ],
     )
@@ -300,10 +323,10 @@ def start_gui(page: ft.Page):
         on_change=dropdown_changed,
         label="MODの対応バージョン",
         width=300,
-        border_color="#4a9eff",
-        focused_border_color="#4a9eff",
-        label_style=ft.TextStyle(color="#ffffff"),
-        text_style=ft.TextStyle(color="#ffffff"),
+        border_color=COLORS['primary'],
+        focused_border_color=COLORS['primary'],
+        label_style=ft.TextStyle(color=COLORS['text']),
+        text_style=ft.TextStyle(color=COLORS['text']),
         options=[ft.dropdown.Option(version) for version in version_dict.keys()],
     )
 
@@ -312,7 +335,7 @@ def start_gui(page: ft.Page):
 
     global selected_files
     selected_files = ft.Text(
-        color="#ffffff",
+        color=COLORS['text'],
         size=14,
     )
 
@@ -321,8 +344,8 @@ def start_gui(page: ft.Page):
         text="翻訳するMODのjarファイルを選択",
         icon=ft.Icons.ATTACH_FILE,
         style=ft.ButtonStyle(
-            bgcolor="#2b2e31",
-            color="#4a9eff",
+            bgcolor=COLORS['secondary'],
+            color=COLORS['text'],
         ),
         visible=False,
         offset=ft.transform.Offset(0, 0.5),  # 初期位置を下に
@@ -339,8 +362,8 @@ def start_gui(page: ft.Page):
         text="クリップボードからパスを取得",
         icon=ft.Icons.CONTENT_PASTE,
         style=ft.ButtonStyle(
-            bgcolor="#2b2e31",
-            color="#4a9eff",
+            bgcolor=COLORS['secondary'],
+            color=COLORS['text'],
         ),
         visible=False,
         offset=ft.transform.Offset(0, 0.5),  # 初期位置を下に
@@ -357,7 +380,7 @@ def start_gui(page: ft.Page):
                 spacing=20,
                 controls=[
                     dd,
-                    ft.Divider(color="#4a9eff", height=1),
+                    ft.Divider(color=COLORS['divider'], height=1),
                     ft.Row(
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=20,
@@ -367,7 +390,8 @@ def start_gui(page: ft.Page):
                 ],
             ),
         ),
-        elevation=5,
+        elevation=8,
+        color=COLORS['card'],
     )
 
     page.add(
@@ -420,53 +444,69 @@ def make_progress_bar(page: ft.Page, lang_file_path):
     Returns:
         tuple: (プログレスバー, 情報表示テキスト)
     """
+    # ローディングインジケータが表示されている場合は非表示にする
+    hide_loading(page)
+
     file_name = os.path.basename(os.path.dirname(os.path.dirname(lang_file_path)))
 
     # プログレスバーとテキスト
     pb = ft.ProgressBar(
         width=300,
-        color="#4a9eff",
-        bgcolor="#2b2e31",
+        color=COLORS['primary'],
+        bgcolor=COLORS['card'],
     )
 
     show_info = ft.Text(
         "翻訳中...",
-        color="#ffffff",
+        color=COLORS['text'],
         size=14,
     )
 
-    # 横並びレイアウト
-    progress_row = ft.Row(
+    # カード内の2カラムレイアウト
+    progress_columns = ft.Row(
         controls=[
-            # MOD名
-            ft.Text(
-                f"{file_name}",
-                color="#ffffff",
-                size=16,
-                width=200,
-                weight=ft.FontWeight.BOLD,
-                text_align=ft.TextAlign.RIGHT,
+            # 左カラム (MOD名)
+            ft.Container(
+                content=ft.Text(
+                    f"{file_name}",
+                    color=COLORS['text'],
+                    size=16,
+                    weight=ft.FontWeight.BOLD,
+                ),
+                alignment=ft.alignment.center,
+                expand=True,  # カラムを均等に広げる
             ),
-            # 進捗状況
-            ft.Column(
-                controls=[
-                    show_info,
-                    pb,
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            # 区切り線
+            ft.VerticalDivider(
+                width=1,
+                color=COLORS['divider'],
+            ),
+            # 右カラム (進捗状況)
+            ft.Container(
+                content=ft.Column(
+                    controls=[
+                        show_info,
+                        pb,
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=10,
+                ),
+                alignment=ft.alignment.center,
+                expand=True,  # カラムを均等に広げる
             ),
         ],
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        alignment=ft.MainAxisAlignment.CENTER,
     )
 
     # カードでラップ
     progress_card = ft.Card(
         content=ft.Container(
-            content=progress_row,
+            content=progress_columns,
             padding=15,
             border_radius=10,
         ),
-        elevation=3,
+        elevation=8,
+        color=COLORS['card'],
     )
 
     # スクロール可能なコンテナがまだない場合は作成
@@ -542,38 +582,40 @@ def make_extract_progress(page: ft.Page):
     # プログレスバーとテキスト
     pb = ft.ProgressBar(
         width=300,
-        color="#4a9eff",
-        bgcolor="#2b2e31",
+        color=COLORS['primary'],
+        bgcolor=COLORS['card'],
     )
 
     show_info = ft.Text(
         "解凍中...",
-        color="#ffffff",
+        color=COLORS['text'],
         size=14,
     )
 
     # 進捗表示レイアウト
     progress_row = ft.Row(
         controls=[
-            # MOD解凍中の表示
-            ft.Text(
-                "MODファイル解凍中",
-                color="#ffffff",
-                size=16,
-                width=200,
-                weight=ft.FontWeight.BOLD,
-                text_align=ft.TextAlign.RIGHT,
+            # 解凍中の表示とファイル名を横並びに
+            ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.Text(
+                            "解凍中：",
+                            color=COLORS['text'],
+                            size=14,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        show_info,
+                    ],
+                    width=400,  # 固定幅を設定
+                ),
+                alignment=ft.alignment.center,  # 中央寄せ
             ),
-            # 進捗状況
-            ft.Column(
-                controls=[
-                    show_info,
-                    pb,
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
+            # 進捗バー
+            pb,
         ],
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        alignment=ft.MainAxisAlignment.CENTER,  # 全体を中央寄せ
+        spacing=20,
     )
 
     # カードでラップ
@@ -582,8 +624,10 @@ def make_extract_progress(page: ft.Page):
             content=progress_row,
             padding=15,
             border_radius=10,
+            alignment=ft.alignment.center,  # コンテナ内も中央寄せ
         ),
-        elevation=3,
+        elevation=8,
+        color=COLORS['card'],
     )
 
     # スクロール可能なコンテナを作成・更新
@@ -630,7 +674,12 @@ def update_extract_progress(
         file_name (str): 現在処理中のファイル名
     """
     pb.value = current / total
-    show_info.value = f"解凍中... {file_name} ({current}/{total})"
+    # ファイル名が30文字を超える場合は省略
+    if len(file_name) > 30:
+        truncated_name = file_name[:27] + "..."
+    else:
+        truncated_name = file_name
+    show_info.value = f"{truncated_name} ({current}/{total})"
     page.update()
 
 
@@ -639,13 +688,74 @@ def hide_extract_progress(page: ft.Page):
     解凍進捗のプログレスバーを非表示にする関数
 
     Args:
-
         page (ft.Page): ページオブジェクト
     """
-
     if hasattr(page, "progress_container") and page.progress_container.content.controls:
         # 最初のプログレスカード（解凍進捗）を非表示
         extract_card = page.progress_container.content.controls[0]
-
         page.progress_container.content.controls.remove(extract_card)
+
+        # ローディングインジケータを表示
+        show_loading(page)
+        page.update()
+
+
+def show_loading(page: ft.Page):
+    """
+    翻訳準備中のローディングインジケータを表示する関数
+
+    Args:
+        page (ft.Page): ページオブジェクト
+    """
+    loading_container = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.ProgressRing(
+                    width=40,
+                    height=40,
+                    stroke_width=3,
+                    color=COLORS['primary'],
+                ),
+                ft.Text(
+                    "翻訳の準備中...",
+                    color=COLORS['text'],
+                    size=14,
+                    weight=ft.FontWeight.BOLD,
+                ),
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=20,
+        ),
+        alignment=ft.alignment.center,
+    )
+
+    if not hasattr(page, "progress_container"):
+        page.progress_container = ft.Container(
+            content=ft.Column(
+                controls=[],
+                scroll=ft.ScrollMode.AUTO,
+                spacing=10,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            margin=ft.margin.only(top=20, bottom=20),
+            height=page.window_height - 150,
+            expand=True,
+        )
+        page.add(page.progress_container)
+
+    page.progress_container.content.controls.append(loading_container)
+    page.loading_container = loading_container
+    page.update()
+
+
+def hide_loading(page: ft.Page):
+    """
+    ローディングインジケータを非表示にする関数
+
+    Args:
+        page (ft.Page): ページオブジェクト
+    """
+    if hasattr(page, "loading_container"):
+        page.progress_container.content.controls.remove(page.loading_container)
+        delattr(page, "loading_container")
         page.update()

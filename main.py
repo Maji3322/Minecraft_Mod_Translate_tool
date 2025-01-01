@@ -1,12 +1,7 @@
-""" 作成: 2024/04/05
-
-# このバージョンでは、モジュール化を行うことを目標とする。
-
+"""
 <予定している機能改善>
 ・全体の翻訳完了までの予想時間を表示
-・modのなかにあるmodも翻訳できるようにしたい。(aaa.jar/META-INF/jars/xxx.jar/assets/yyy/lang/en_us.json)
 ・自動アップデート機能
-・TESTsss
 
 <バグ・不具合>
 ・ファイル名が長すぎると謎のエラーが起きてしまう...(try-exceptで回避したけども...)
@@ -72,6 +67,9 @@ def process_app(file_paths, file_names, page):
 
     # 翻訳開始前にUI要素を隠す
     gui_module.hide_selection_ui(page)
+
+    # ローディングインジケータを非表示にする
+    gui_module.hide_loading(page)
 
     # temp と translate_rp を同時に初期化
     file_utils.init_dir("temp")
