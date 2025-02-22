@@ -1,3 +1,8 @@
+> [!WARNING]
+> メイン貢献者のGitHubアカウントがSpammyとしてFlaggedされたため、開発再開の目途が立っていません！しばらく止まったままです！  
+> 宣伝作成は行うかもしれません。  
+
+
 # **MineCraft-Mod-Translate-Tool**
 
 <p align="center">
