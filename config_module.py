@@ -12,6 +12,7 @@ def remove_other_files(path):
     Args:
         path (str): 削除するフォルダのパス
     """
+    logger.info("remove_other_files関数を開始します。")
     for root, dirs, files in os.walk(path):
         for d in dirs:
             if d != "lang":
