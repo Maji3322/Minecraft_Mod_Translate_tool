@@ -30,6 +30,7 @@ def init_dir(path):
         logger.error("%sの初期化に失敗しました。エラー: %s", path, str(e))
     return
 
+
 def gen_pack_dir(pack_format, page, json_files):
     """
     pack.mcmetaを生成し、assetsフォルダを生成する関数。
@@ -201,20 +202,25 @@ def recursive_unzip_jar(path: str):
     return jar_folder
 
 
-def delete_files_except(root_dir, target_file_paths):
+def clean_directory(root_dir: str, target_file_paths: list) -> None:
     """
-    指定されたファイルを残し、そこにたどり着くためのフォルダも残して、
-    他のファイルやフォルダをすべて削除する関数
+    指定されたディレクトリ内で、target_file_paths に含まれないファイルとフォルダを削除する
 
     Args:
-        root_dir (str): ルートディレクトリ(処理対象フォルダ)のパス
-        target_file_path (str): 残すするファイルのパス
+        root_dir (str): クリーニングを行うルートディレクトリのパス
+        target_file_paths (list): 保持するファイルパスのリスト
+
+    Returns:
+        None
     """
+    # Delete files that are not in target_file_paths
     for dirpath, dirnames, filenames in os.walk(root_dir, topdown=False):
         for filename in filenames:
             file_path = os.path.join(dirpath, filename)
             if file_path not in target_file_paths:
                 os.remove(file_path)
+
+        # Delete empty directories or directories not containing target files
         for dirname in dirnames:
             dir_path = os.path.join(dirpath, dirname)
             if not any(
@@ -224,14 +230,12 @@ def delete_files_except(root_dir, target_file_paths):
                 shutil.rmtree(dir_path)
 
     # Print the remaining files and folders
-    print("Remaining files and folders:")
+    print("残っているファイルとフォルダ:")
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for filename in filenames:
             print(os.path.join(dirpath, filename))
         for dirname in dirnames:
             print(os.path.join(dirpath, dirname))
-
-    return
 
 
 def copy_assets_folders(root_dir, json_file_paths):
