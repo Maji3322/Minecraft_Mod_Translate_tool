@@ -56,13 +56,12 @@ def search_lang_file():
         if not os.path.exists(ja_jp_json_path):
             logger.info(
                 "「%s」に対応するja_jp.jsonが見つからないため、翻訳対象とします。",
-                en_us_path
+                en_us_path,
             )
             need_translation_paths.append(en_us_path)
         else:
             logger.info(
-                "「%s」に対応するja_jp.jsonが存在するため、スキップします。",
-                en_us_path
+                "「%s」に対応するja_jp.jsonが存在するため、スキップします。", en_us_path
             )
 
     if not need_translation_paths:

@@ -1,6 +1,6 @@
 import json
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from venv import logger
 
 import tqdm
@@ -57,6 +57,7 @@ def translate_json(lang_file_path, page):
                     try:
                         result = translator.translate(value, dest="ja")
                         # TODO:いつかここに専用辞書を配備したい
+                        # Google翻訳では半角記号が全角記号に変換されてしまうことがあるため、カラースキーマのために置換。
                         result.text = result.text.replace("％", " %").replace("$ ", "$")
                         ja_json[key] = result.text
                         translated_strings += 1
@@ -70,8 +71,12 @@ def translate_json(lang_file_path, page):
                         )
                         pbar.update(1)
                     except Exception as e:
-                        logger.error(f"Error translating {lang_file_path}: {e}", exc_info=True)
-                        gui_module.err_dlg(page, "エラー", f"{lang_file_path}の翻訳に失敗しました。")
+                        logger.error(
+                            f"Error translating {lang_file_path}: {e}", exc_info=True
+                        )
+                        gui_module.err_dlg(
+                            page, "エラー", f"{lang_file_path}の翻訳に失敗しました。"
+                        )
                         raise RuntimeError("翻訳エラーが発生しました。") from e
                 elif isinstance(value, dict):
                     ja_dict = {}
@@ -83,8 +88,15 @@ def translate_json(lang_file_path, page):
                                 translated_strings += 1
                                 pbar.update(1)
                             except Exception as e:
-                                logger.error(f"Error translating {lang_file_path}: {e}", exc_info=True)
-                                gui_module.err_dlg(page, "エラー", f"{lang_file_path}の翻訳に失敗しました。")
+                                logger.error(
+                                    f"Error translating {lang_file_path}: {e}",
+                                    exc_info=True,
+                                )
+                                gui_module.err_dlg(
+                                    page,
+                                    "エラー",
+                                    f"{lang_file_path}の翻訳に失敗しました。",
+                                )
                                 raise RuntimeError("翻訳エラーが発生しました。") from e
                         else:
                             ja_dict[sub_key] = sub_value

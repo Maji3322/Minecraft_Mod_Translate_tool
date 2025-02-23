@@ -16,14 +16,14 @@ import main
 
 # カラーパレットの定義
 COLORS = {
-    'primary': '#5B8FF9',      # メインカラー（より鮮やかな青）
-    'background': '#1E1E2E',   # 背景色（より落ち着いた暗色）
-    'card': '#2A2A3C',        # カード背景（より深みのある色）
-    'text': '#FFFFFF',        # 文字色（白）
-    'secondary': '#334656',    # セカンダリーカラー（ボタン背景など）
-    'accent': '#6C7693',      # アクセントカラー
-    'divider': '#5B8FF9',     # 区切り線
-    'error': '#FF5555',       # エラー表示用
+    "primary": "#5B8FF9",  # メインカラー（より鮮やかな青）
+    "background": "#1E1E2E",  # 背景色（より落ち着いた暗色）
+    "card": "#2A2A3C",  # カード背景（より深みのある色）
+    "text": "#FFFFFF",  # 文字色（白）
+    "secondary": "#334656",  # セカンダリーカラー（ボタン背景など）
+    "accent": "#6C7693",  # アクセントカラー
+    "divider": "#5B8FF9",  # 区切り線
+    "error": "#FF5555",  # エラー表示用
 }
 
 logger = logging.getLogger(__name__)
@@ -111,7 +111,7 @@ def select_file(e: ft.FilePickerResultEvent, page: ft.Page):
     )  # 選択されたファイルの名前を取得
 
     # ファイルのパスをボタンの右側に表示
-    ft.Text(file_paths, width=300, style=ft.TextStyle(bgcolor=COLORS['background']))
+    ft.Text(file_paths, width=300, style=ft.TextStyle(bgcolor=COLORS["background"]))
     selected_files.value = (
         ", ".join(map(lambda f: f.name, e.files))
         if e.files
@@ -206,11 +206,11 @@ def start_gui(page: ft.Page):
         print(f"アイコン設定中にエラーが発生しました: {str(e)}")
 
     page.theme = ft.Theme(
-        color_scheme_seed=COLORS['primary'],
+        color_scheme_seed=COLORS["primary"],
         font_family="Noto Sans JP",
     )
     page.padding = 30
-    page.bgcolor = COLORS['background']
+    page.bgcolor = COLORS["background"]
     page.update()
 
     pack_format = None
@@ -277,7 +277,7 @@ def start_gui(page: ft.Page):
     # モダンなAppBarデザイン
     page.appbar = ft.AppBar(
         leading=ft.Container(
-            content=ft.Icon(ft.Icons.G_TRANSLATE, color=COLORS['primary'], size=30),
+            content=ft.Icon(ft.Icons.G_TRANSLATE, color=COLORS["primary"], size=30),
             padding=ft.padding.only(left=15),  # 左側に10ピクセルの余白を追加
         ),
         leading_width=40,
@@ -285,10 +285,10 @@ def start_gui(page: ft.Page):
             "MC MOD Translator Tool",
             size=24,
             weight=ft.FontWeight.BOLD,
-            color=COLORS['text'],
+            color=COLORS["text"],
         ),
         center_title=True,
-        bgcolor=COLORS['card'],
+        bgcolor=COLORS["card"],
         elevation=2,
         actions=[
             ft.Container(
@@ -296,7 +296,7 @@ def start_gui(page: ft.Page):
                     controls=[
                         ft.IconButton(
                             ft.Icons.HELP_OUTLINE,
-                            icon_color=COLORS['primary'],
+                            icon_color=COLORS["primary"],
                             tooltip="このアプリについて",
                             on_click=lambda e: err_dlg(
                                 page,
@@ -306,7 +306,7 @@ def start_gui(page: ft.Page):
                         ),
                         ft.IconButton(
                             ft.Icons.CODE_ROUNDED,
-                            icon_color=COLORS['primary'],
+                            icon_color=COLORS["primary"],
                             tooltip="GitHubを開く",
                             on_click=lambda e: confirmOpenGitHub(),
                         ),
@@ -323,10 +323,10 @@ def start_gui(page: ft.Page):
         on_change=dropdown_changed,
         label="MODの対応バージョン",
         width=300,
-        border_color=COLORS['primary'],
-        focused_border_color=COLORS['primary'],
-        label_style=ft.TextStyle(color=COLORS['text']),
-        text_style=ft.TextStyle(color=COLORS['text']),
+        border_color=COLORS["primary"],
+        focused_border_color=COLORS["primary"],
+        label_style=ft.TextStyle(color=COLORS["text"]),
+        text_style=ft.TextStyle(color=COLORS["text"]),
         options=[ft.dropdown.Option(version) for version in version_dict.keys()],
     )
 
@@ -335,7 +335,7 @@ def start_gui(page: ft.Page):
 
     global selected_files
     selected_files = ft.Text(
-        color=COLORS['text'],
+        color=COLORS["text"],
         size=14,
     )
 
@@ -344,8 +344,8 @@ def start_gui(page: ft.Page):
         text="翻訳するMODのjarファイルを選択",
         icon=ft.Icons.ATTACH_FILE,
         style=ft.ButtonStyle(
-            bgcolor=COLORS['secondary'],
-            color=COLORS['text'],
+            bgcolor=COLORS["secondary"],
+            color=COLORS["text"],
         ),
         visible=False,
         offset=ft.transform.Offset(0, 0.5),  # 初期位置を下に
@@ -362,8 +362,8 @@ def start_gui(page: ft.Page):
         text="クリップボードからパスを取得",
         icon=ft.Icons.CONTENT_PASTE,
         style=ft.ButtonStyle(
-            bgcolor=COLORS['secondary'],
-            color=COLORS['text'],
+            bgcolor=COLORS["secondary"],
+            color=COLORS["text"],
         ),
         visible=False,
         offset=ft.transform.Offset(0, 0.5),  # 初期位置を下に
@@ -380,7 +380,7 @@ def start_gui(page: ft.Page):
                 spacing=20,
                 controls=[
                     dd,
-                    ft.Divider(color=COLORS['divider'], height=1),
+                    ft.Divider(color=COLORS["divider"], height=1),
                     ft.Row(
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=20,
@@ -391,7 +391,7 @@ def start_gui(page: ft.Page):
             ),
         ),
         elevation=8,
-        color=COLORS['card'],
+        color=COLORS["card"],
     )
 
     page.add(
@@ -452,13 +452,13 @@ def make_progress_bar(page: ft.Page, lang_file_path):
     # プログレスバーとテキスト
     pb = ft.ProgressBar(
         width=300,
-        color=COLORS['primary'],
-        bgcolor=COLORS['card'],
+        color=COLORS["primary"],
+        bgcolor=COLORS["card"],
     )
 
     show_info = ft.Text(
         "翻訳中...",
-        color=COLORS['text'],
+        color=COLORS["text"],
         size=14,
     )
 
@@ -469,7 +469,7 @@ def make_progress_bar(page: ft.Page, lang_file_path):
             ft.Container(
                 content=ft.Text(
                     f"{file_name}",
-                    color=COLORS['text'],
+                    color=COLORS["text"],
                     size=16,
                     weight=ft.FontWeight.BOLD,
                 ),
@@ -479,7 +479,7 @@ def make_progress_bar(page: ft.Page, lang_file_path):
             # 区切り線
             ft.VerticalDivider(
                 width=1,
-                color=COLORS['divider'],
+                color=COLORS["divider"],
             ),
             # 右カラム (進捗状況)
             ft.Container(
@@ -506,7 +506,7 @@ def make_progress_bar(page: ft.Page, lang_file_path):
             border_radius=10,
         ),
         elevation=8,
-        color=COLORS['card'],
+        color=COLORS["card"],
     )
 
     # スクロール可能なコンテナがまだない場合は作成
@@ -559,7 +559,9 @@ def progress_bar_update(
         logger.info("Progress bar updated successfully")
     except Exception as e:
         logger.error("Error updating progress bar: %s", e, exc_info=True)
-        logger.error(f"logger info:\npb.value={pb.value}\ni={i}\ntotal_strings={total_strings}\nshow_info.value={show_info.value}")
+        logger.error(
+            f"logger info:\npb.value={pb.value}\ni={i}\ntotal_strings={total_strings}\nshow_info.value={show_info.value}"
+        )
         raise
 
 
@@ -583,13 +585,13 @@ def make_extract_progress(page: ft.Page):
     # プログレスバーとテキスト
     pb = ft.ProgressBar(
         width=300,
-        color=COLORS['primary'],
-        bgcolor=COLORS['card'],
+        color=COLORS["primary"],
+        bgcolor=COLORS["card"],
     )
 
     show_info = ft.Text(
         "解凍中...",
-        color=COLORS['text'],
+        color=COLORS["text"],
         size=14,
     )
 
@@ -602,7 +604,7 @@ def make_extract_progress(page: ft.Page):
                     controls=[
                         ft.Text(
                             "解凍中：",
-                            color=COLORS['text'],
+                            color=COLORS["text"],
                             size=14,
                             weight=ft.FontWeight.BOLD,
                         ),
@@ -628,7 +630,7 @@ def make_extract_progress(page: ft.Page):
             alignment=ft.alignment.center,  # コンテナ内も中央寄せ
         ),
         elevation=8,
-        color=COLORS['card'],
+        color=COLORS["card"],
     )
 
     # スクロール可能なコンテナを作成・更新
@@ -715,11 +717,11 @@ def show_loading(page: ft.Page):
                     width=40,
                     height=40,
                     stroke_width=3,
-                    color=COLORS['primary'],
+                    color=COLORS["primary"],
                 ),
                 ft.Text(
                     "翻訳の準備中...",
-                    color=COLORS['text'],
+                    color=COLORS["text"],
                     size=14,
                     weight=ft.FontWeight.BOLD,
                 ),
