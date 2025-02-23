@@ -3,7 +3,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from venv import logger
 
-import flet as ft
 import tqdm
 from googletrans import Translator
 
@@ -19,20 +18,16 @@ def translate_json(lang_file_path, page):
         lang_file_path (str): 翻訳するjsonファイルのパス
     """
 
-    # 翻訳開始時刻を記録
     start_time = time.time()
     try:
         translator = Translator()
 
         logger.info("=" * 20)
-        logger.info(f"LOG: {lang_file_path}の翻訳を開始します。")
+        logger.info("%sの翻訳を開始します。", lang_file_path)
         logger.info("=" * 20)
-
         print(f"LOG: {lang_file_path}の翻訳を開始します。")
 
-        with open(
-            lang_file_path, "r+", encoding="utf-8"
-        ) as f:  # それぞれの引数には、①ファイルのパス、②読み込みモード、③文字コードを指定
+        with open(lang_file_path, "r+", encoding="utf-8") as f:
 
             def find_strings(json_data):
                 """
@@ -49,38 +44,23 @@ def translate_json(lang_file_path, page):
                         yield from find_strings(value)
 
             en_json = json.load(f)
+            ja_json = {}
+            total_strings = sum(1 for _ in find_strings(en_json))
 
-            # 翻訳事前準備
-            ja_json = {}  # ja_jp.jsonを作成するための空の辞書を作成
-            total_strings = sum(
-                1 for _ in find_strings(en_json)
-            )  # en_us.jsonに含まれる文字列の数を数える
-            progressbar, info_msg = gui_module.make_progress_bar(
-                page, lang_file_path
-            )  # info_msgはプログレスバーの下に表示されるメッセージ
-
-            translated_strings = 0  # 翻訳された文字列の数を数える
-            # gui_module.make_progress_bar(page,total_strings)  # プログレスバーを作成
-            # ターミナル用のプログレスバーを表示
+            progressbar, info_msg = gui_module.make_progress_bar(page, lang_file_path)
+            translated_strings = 0
             pbar = tqdm.tqdm(total=total_strings, position=0, leave=True)
             pbar.update(0)
 
-            # 翻訳開始時間を記録
-
-            # 残り時間を表示するラベルを作成
-            # en_us.jsonの中身を走査して翻訳を実行
-            for key, value in en_json.items():  # en_us.jsonの中身を走査
-
-                if isinstance(value, str):  # valueが文字列の場合
-
+            for key, value in en_json.items():
+                if isinstance(value, str):
                     try:
                         result = translator.translate(value, dest="ja")
-                        result.text = result.text.replace(
-                            "％", "%"
-                        )  # 翻訳結果の中に含まれる全角の%を半角に変換
+                        # TODO:いつかここに専用辞書を配備したい
+                        # Google翻訳では半角記号が全角記号に変換されてしまうことがあるため、カラースキーマのために置換。
+                        result.text = result.text.replace("％", " %").replace("$ ", "$")
                         ja_json[key] = result.text
                         translated_strings += 1
-                        # ProgressBarをインクリメント
                         gui_module.progress_bar_update(
                             progressbar,
                             translated_strings,
@@ -89,40 +69,39 @@ def translate_json(lang_file_path, page):
                             page,
                             start_time,
                         )
-
                         pbar.update(1)
-
-                        # 残り時間を計算して表示
-
-                    # 翻訳エラーが発生した場合は、ja_jp.jsonにen_us.jsonの内容をそのまま書き込む
                     except Exception as e:
-                        logger.error(f"ERROR: translation error >> {e}")
-                        ja_json[key] = value
-
-                elif isinstance(value, dict):  # valueが辞書型の場合
-                    ja_dict = {}  # ja_jp.jsonの中身を作成するための空の辞書を作成
+                        logger.error(
+                            f"Error translating {lang_file_path}: {e}", exc_info=True
+                        )
+                        gui_module.err_dlg(
+                            page, "エラー", f"{lang_file_path}の翻訳に失敗しました。"
+                        )
+                        raise RuntimeError("翻訳エラーが発生しました。") from e
+                elif isinstance(value, dict):
+                    ja_dict = {}
                     for sub_key, sub_value in value.items():
                         if isinstance(sub_value, str):
                             try:
-                                result = translator.translate(
-                                    sub_value, dest="ja"
-                                )  # 翻訳を実行
+                                result = translator.translate(sub_value, dest="ja")
                                 ja_dict[sub_key] = result.text
                                 translated_strings += 1
-                                # UpdateProgress関数を呼び出してTkinterのProgressBarを更新
                                 pbar.update(1)
-
-                                # 残り時間を計算して表示
-
-                            # 翻訳エラーが発生した場合は、ja_jp.jsonにen_us.jsonの内容をそのまま書き込む
                             except Exception as e:
-                                logger.error(f"ERROR: translation error >> {e}")
-                                ja_dict[sub_key] = sub_value
+                                logger.error(
+                                    f"Error translating {lang_file_path}: {e}",
+                                    exc_info=True,
+                                )
+                                gui_module.err_dlg(
+                                    page,
+                                    "エラー",
+                                    f"{lang_file_path}の翻訳に失敗しました。",
+                                )
+                                raise RuntimeError("翻訳エラーが発生しました。") from e
                         else:
                             ja_dict[sub_key] = sub_value
                     ja_json[key] = ja_dict
 
-            # ja_jp.jsonを保存する(file_pathのディレクトリにja_jp.jsonとして保存)
             with open(
                 lang_file_path.replace("en_us.json", "ja_jp.json"),
                 "w",
@@ -130,16 +109,14 @@ def translate_json(lang_file_path, page):
             ) as f:
                 json.dump(ja_json, f, indent=4, ensure_ascii=False)
 
-            logger.info(f"LOG: {lang_file_path}の翻訳が完了しました。")
-            logger.info("=" * 20)  # 終了を示すために区切り線を表示
-            info_msg.value = f"翻訳が完了しました。"
-
+            logger.info("%sの翻訳が完了しました。", lang_file_path)
+            logger.info("=" * 20)
+            info_msg.value = (
+                f"完了：{translated_strings}/{total_strings}箇所を翻訳しました。"
+            )
             return 0
-    except Exception as e:
-        logger.error(f"ERROR: {lang_file_path}の翻訳に失敗しました。")
-        logger.error(f"ERROR: {e}")
-        print(f"ERROR: {lang_file_path}の翻訳に失敗しました。")
-        print(f"ERROR: {e}")
+    except (json.JSONDecodeError, IOError, RuntimeError) as e:
+        logger.error(f"Error translating {lang_file_path}: {e}", exc_info=True)
         gui_module.err_dlg(page, "エラー", f"{lang_file_path}の翻訳に失敗しました。")
         return 1
 
@@ -157,13 +134,13 @@ def translate_in_thread(lang_file_paths, page):
         )
         return
     elif lang_file_paths == "exist ja_jp.json":
-        logger.info("LOG: ja_jp.jsonが見つかったので、翻訳をスキップします。")
+        logger.info("ja_jp.jsonが見つかったので、翻訳をスキップします。")
         gui_module.err_dlg(
             page, "エラー", "ja_jp.jsonが見つかったので、翻訳をスキップします。"
         )
         return
     else:
-        logger.info("LOG: en_us.jsonが見つかり、ja_jp.jsonがないため翻訳を開始します。")
+        logger.info("en_us.jsonが見つかり、ja_jp.jsonがないため翻訳を開始します。")
         print(f"成功!{lang_file_paths}")
 
     with ThreadPoolExecutor() as executor:
@@ -173,13 +150,13 @@ def translate_in_thread(lang_file_paths, page):
         )
         for result in results:
             if result == 0:
-                logger.info("LOG: 翻訳が完了しました。")
+                logger.info("翻訳が完了しました。")
             else:
-                logger.error("ERROR: 翻訳に失敗しました。")
+                logger.error("翻訳に失敗しました。")
                 gui_module.err_dlg(page, "エラー", "翻訳に失敗しました。")
                 return
     # 全ての翻訳が終わったことを表示
-    logger.info("LOG: 全ての翻訳が完了しました。")
+    logger.info("全ての翻訳が完了しました。")
 
     # 翻訳が完了したことを示すメッセージを表示
     gui_module.err_dlg(page, "完了", "全ての翻訳が完了しました。")
@@ -187,7 +164,3 @@ def translate_in_thread(lang_file_paths, page):
     # メインスレッド以外を終了
     ThreadPoolExecutor().shutdown(wait=True)
     return 0
-
-
-if __name__ == "__main__":
-    ft.app(target=translate_json("test.json"))

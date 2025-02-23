@@ -6,3 +6,13 @@ __pycache__/
 *.pyo
 *.pyd
 .conda
+.pytest_cache/
+main.build/
+main.dist/
+main.exe
+nuitka-crash-report.xml
+main.onefile-build/
+.env.local
+tempCodeRunnerFile.py
+.vscode/
+
