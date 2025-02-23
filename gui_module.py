@@ -553,12 +553,13 @@ def progress_bar_update(
         remaining_strings = total_strings - i
         remaining_time = avg_time_per_string * remaining_strings
         show_info.value = f"翻訳中... 残り時間: {round(remaining_time)}秒"
-        logger.debug(f"Page state before update: {page}")
+        logger.debug("Page state before update: %s", page)
         page.update()
-        logger.debug(f"Page state after update: {page}")
+        logger.debug("Page state after update: %s", page)
         logger.info("Progress bar updated successfully")
     except Exception as e:
-        logger.error(f"Error updating progress bar: {e}", exc_info=True)
+        logger.error("Error updating progress bar: %s", e, exc_info=True)
+        logger.error(f"logger info:\npb.value={pb.value}\ni={i}\ntotal_strings={total_strings}\nshow_info.value={show_info.value}")
         raise
 
 

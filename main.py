@@ -1,10 +1,133 @@
 """
 <予定している機能改善>
 ・全体の翻訳完了までの予想時間を表示
-・自動アップデート機能
+・自動バージョンアップデート機能（再ダウンロード不要にする。どうやってやるのかはわからないけども...）
 
 <バグ・不具合>
 ・ファイル名が長すぎると謎のエラーが起きてしまう...(try-exceptで回避したけども...)
+・マージがうまくいっていない気がする。
+
+
+2025-01-01 11:08:28,858 - main - INFO - translate_rpフォルダを生成しました。
+assets フォルダをコピーしました: translate_rp\assets\appleskin
+assets フォルダをコピーしました: translate_rp\assets\cloth-config2
+assets フォルダをコピーしました: translate_rp\assets\balm
+assets フォルダをコピーしました: translate_rp\assets\clickthrough
+assets フォルダをマージしました: translate_rp\assets\cloth-config2         ←ほんとにマージできているのか？
+assets フォルダをコピーしました: translate_rp\assets\defaultoptions
+assets フォルダをコピーしました: translate_rp\assets\entityculling
+assets フォルダをコピーしました: translate_rp\assets\fabric-convention-tags-v2
+assets フォルダをコピーしました: translate_rp\assets\fabric
+assets フォルダをコピーしました: translate_rp\assets\fabric-registry-sync-v0
+assets フォルダをコピーしました: translate_rp\assets\fabric-resource-loader-v0
+assets フォルダをコピーしました: translate_rp\assets\feather
+assets フォルダをコピーしました: translate_rp\assets\fix-mc-stats
+assets フォルダをコピーしました: translate_rp\assets\freecam
+assets フォルダをマージしました: translate_rp\assets\cloth-config2
+assets フォルダをコピーしました: translate_rp\assets\itemswapper
+assets フォルダをマージしました: translate_rp\assets\itemswapper
+assets フォルダをマージしました: translate_rp\assets\itemswapper
+assets フォルダをコピーしました: translate_rp\assets\labellingcontainers
+assets フォルダをコピーしました: translate_rp\assets\lightweight-inventory-sorting
+assets フォルダをコピーしました: translate_rp\assets\magnetic
+assets フォルダをコピーしました: translate_rp\assets\modernfix
+assets フォルダをコピーしました: translate_rp\assets\modmenu
+assets フォルダをマージしました: translate_rp\assets\fabric-resource-loader-v0
+assets フォルダをコピーしました: translate_rp\assets\placeholderapi
+assets フォルダをコピーしました: translate_rp\assets\moreculling
+assets フォルダをコピーしました: translate_rp\assets\notenoughanimations
+assets フォルダをマージしました: translate_rp\assets\placeholderapi
+assets フォルダをコピーしました: translate_rp\assets\reeses-sodium-options
+assets フォルダをコピーしました: translate_rp\assets\resourcify
+assets フォルダをコピーしました: translate_rp\assets\searchables
+assets フォルダをコピーしました: translate_rp\assets\shulkerboxtooltip
+assets フォルダをコピーしました: translate_rp\assets\sodium-extra
+assets フォルダをコピーしました: translate_rp\assets\sodium
+assets フォルダをマージしました: translate_rp\assets\fabric-resource-loader-v0
+assets フォルダをコピーしました: translate_rp\assets\sodiumextrainformation
+assets フォルダをコピーしました: translate_rp\assets\sounds
+assets フォルダをコピーしました: translate_rp\assets\yet_another_config_lib_v3
+assets フォルダをコピーしました: translate_rp\assets\xaeroworldmap
+assets フォルダをコピーしました: translate_rp\assets\xaerobetterpvp
+assets フォルダをコピーしました: translate_rp\assets\xaerominimap
+assets フォルダをマージしました: translate_rp\assets\yet_another_config_lib_v3
+assets フォルダをコピーしました: translate_rp\assets\zoomify
+2025-01-01 11:08:31,103 - search_files - INFO - search_lang_file関数を開始します。
+translate_rp\assets\appleskin\lang\ja_jp.json
+2025-01-01 11:08:31,142 - search_files - INFO - 「translate_rp\assets\appleskin\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\balm\lang\ja_jp.json
+2025-01-01 11:08:31,145 - search_files - INFO - 「translate_rp\assets\balm\lang\en_us.json」に対応するja_jp.jsonが見つからない ため、翻訳対象とします。
+translate_rp\assets\clickthrough\lang\ja_jp.json
+2025-01-01 11:08:31,147 - search_files - INFO - 「translate_rp\assets\clickthrough\lang\en_us.json」に対応するja_jp.jsonが存在 するため、スキップします。
+translate_rp\assets\cloth-config2\lang\ja_jp.json
+2025-01-01 11:08:31,149 - search_files - INFO - 「translate_rp\assets\cloth-config2\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\defaultoptions\lang\ja_jp.json
+2025-01-01 11:08:31,151 - search_files - INFO - 「translate_rp\assets\defaultoptions\lang\en_us.json」に対応するja_jp.jsonが見 つからないため、翻訳対象とします。
+translate_rp\assets\entityculling\lang\ja_jp.json
+2025-01-01 11:08:31,154 - search_files - INFO - 「translate_rp\assets\entityculling\lang\en_us.json」に対応するja_jp.jsonが見つからないため、翻訳対象とします。
+translate_rp\assets\fabric\lang\ja_jp.json
+2025-01-01 11:08:31,157 - search_files - INFO - 「translate_rp\assets\fabric\lang\en_us.json」に対応するja_jp.jsonが存在するた め、スキップします。
+translate_rp\assets\fabric-convention-tags-v2\lang\ja_jp.json
+2025-01-01 11:08:31,160 - search_files - INFO - 「translate_rp\assets\fabric-convention-tags-v2\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\fabric-registry-sync-v0\lang\ja_jp.json
+2025-01-01 11:08:31,163 - search_files - INFO - 「translate_rp\assets\fabric-registry-sync-v0\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\fabric-resource-loader-v0\lang\ja_jp.json
+2025-01-01 11:08:31,165 - search_files - INFO - 「translate_rp\assets\fabric-resource-loader-v0\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\feather\lang\ja_jp.json
+2025-01-01 11:08:31,170 - search_files - INFO - 「translate_rp\assets\feather\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\fix-mc-stats\lang\ja_jp.json
+2025-01-01 11:08:31,172 - search_files - INFO - 「translate_rp\assets\fix-mc-stats\lang\en_us.json」に対応するja_jp.jsonが見つ からないため、翻訳対象とします。
+translate_rp\assets\freecam\lang\ja_jp.json
+2025-01-01 11:08:31,174 - search_files - INFO - 「translate_rp\assets\freecam\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\itemswapper\lang\ja_jp.json
+2025-01-01 11:08:31,177 - search_files - INFO - 「translate_rp\assets\itemswapper\lang\en_us.json」に対応するja_jp.jsonが見つからないため、翻訳対象とします。
+translate_rp\assets\labellingcontainers\lang\ja_jp.json
+2025-01-01 11:08:31,179 - search_files - INFO - 「translate_rp\assets\labellingcontainers\lang\en_us.json」に対応するja_jp.jsonが見つからないため、翻訳対象とします。
+translate_rp\assets\lightweight-inventory-sorting\lang\ja_jp.json
+2025-01-01 11:08:31,182 - search_files - INFO - 「translate_rp\assets\lightweight-inventory-sorting\lang\en_us.json」に対応するja_jp.jsonが見つからないため、翻訳対象とします。
+translate_rp\assets\magnetic\lang\ja_jp.json
+2025-01-01 11:08:31,186 - search_files - INFO - 「translate_rp\assets\magnetic\lang\en_us.json」に対応するja_jp.jsonが見つから ないため、翻訳対象とします。
+translate_rp\assets\modernfix\lang\ja_jp.json
+2025-01-01 11:08:31,189 - search_files - INFO - 「translate_rp\assets\modernfix\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\modmenu\lang\ja_jp.json
+2025-01-01 11:08:31,191 - search_files - INFO - 「translate_rp\assets\modmenu\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\moreculling\lang\ja_jp.json
+2025-01-01 11:08:31,196 - search_files - INFO - 「translate_rp\assets\moreculling\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\notenoughanimations\lang\ja_jp.json
+2025-01-01 11:08:31,200 - search_files - INFO - 「translate_rp\assets\notenoughanimations\lang\en_us.json」に対応するja_jp.jsonが見つからないため、翻訳対象とします。
+translate_rp\assets\placeholderapi\lang\ja_jp.json
+2025-01-01 11:08:31,204 - search_files - INFO - 「translate_rp\assets\placeholderapi\lang\en_us.json」に対応するja_jp.jsonが見 つからないため、翻訳対象とします。
+translate_rp\assets\reeses-sodium-options\lang\ja_jp.json
+2025-01-01 11:08:31,207 - search_files - INFO - 「translate_rp\assets\reeses-sodium-options\lang\en_us.json」に対応するja_jp.jsonが見つからないため、翻訳対象とします。
+translate_rp\assets\resourcify\lang\ja_jp.json
+2025-01-01 11:08:31,210 - search_files - INFO - 「translate_rp\assets\resourcify\lang\en_us.json」に対応するja_jp.jsonが見つか
+らないため、翻訳対象とします。
+translate_rp\assets\searchables\lang\ja_jp.json
+2025-01-01 11:08:31,211 - search_files - INFO - 「translate_rp\assets\searchables\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\shulkerboxtooltip\lang\ja_jp.json
+2025-01-01 11:08:31,214 - search_files - INFO - 「translate_rp\assets\shulkerboxtooltip\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\sodium\lang\ja_jp.json
+2025-01-01 11:08:31,216 - search_files - INFO - 「translate_rp\assets\sodium\lang\en_us.json」に対応するja_jp.jsonが見つからな いため、翻訳対象とします。
+translate_rp\assets\sodium-extra\lang\ja_jp.json
+2025-01-01 11:08:31,219 - search_files - INFO - 「translate_rp\assets\sodium-extra\lang\en_us.json」に対応するja_jp.jsonが存在 するため、スキップします。
+translate_rp\assets\sodiumextrainformation\lang\ja_jp.json
+2025-01-01 11:08:31,222 - search_files - INFO - 「translate_rp\assets\sodiumextrainformation\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\sounds\lang\ja_jp.json
+2025-01-01 11:08:31,224 - search_files - INFO - 「translate_rp\assets\sounds\lang\en_us.json」に対応するja_jp.jsonが見つからな いため、翻訳対象とします。
+translate_rp\assets\xaerobetterpvp\lang\ja_jp.json
+2025-01-01 11:08:31,226 - search_files - INFO - 「translate_rp\assets\xaerobetterpvp\lang\en_us.json」に対応するja_jp.jsonが存
+在するため、スキップします。
+translate_rp\assets\xaerominimap\lang\ja_jp.json
+2025-01-01 11:08:31,229 - search_files - INFO - 「translate_rp\assets\xaerominimap\lang\en_us.json」に対応するja_jp.jsonが存在 するため、スキップします。
+translate_rp\assets\xaeroworldmap\lang\ja_jp.json
+2025-01-01 11:08:31,231 - search_files - INFO - 「translate_rp\assets\xaeroworldmap\lang\en_us.json」に対応するja_jp.jsonが見つからないため、翻訳対象とします。
+translate_rp\assets\yet_another_config_lib_v3\lang\ja_jp.json
+2025-01-01 11:08:31,234 - search_files - INFO - 「translate_rp\assets\yet_another_config_lib_v3\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+translate_rp\assets\zoomify\lang\ja_jp.json
+2025-01-01 11:08:31,237 - search_files - INFO - 「translate_rp\assets\zoomify\lang\en_us.json」に対応するja_jp.jsonが存在するため、スキップします。
+成功!['translate_rp\\assets\\balm\\lang\\en_us.json', 'translate_rp\\assets\\defaultoptions\\lang\\en_us.json', 'translate_rp\\assets\\entityculling\\lang\\en_us.json', 'translate_rp\\assets\\fix-mc-stats\\lang\\en_us.json', 'translate_rp\\assets\\itemswapper\\lang\\en_us.json', 'translate_rp\\assets\\labellingcontainers\\lang\\en_us.json', 'translate_rp\\assets\\lightweight-inventory-sorting\\lang\\en_us.json', 'translate_rp\\assets\\magnetic\\lang\\en_us.json', 'translate_rp\\assets\\notenoughanimations\\lang\\en_us.json', 'translate_rp\\assets\\placeholderapi\\lang\\en_us.json', 'translate_rp\\assets\\reeses-sodium-options\\lang\\en_us.json', 'translate_rp\\assets\\resourcify\\lang\\en_us.json', 'translate_rp\\assets\\sodium\\lang\\en_us.json', 'translate_rp\\assets\\sounds\\lang\\en_us.json', 'translate_rp\\assets\\xaeroworldmap\\lang\\en_us.json']
+
+
 """
 
 # すべての変数名の重複を回避するために、関数ごとに変数のスコープを分ける。
@@ -118,8 +241,17 @@ def process_app(file_paths, file_names, page):
     logger.log(logging.DEBUG, "Detected en_us.json files: %s", us_en_json_files)
 
     # en_us.jsonファイルのパス上にあるフォルダ以外を削除
-    print(f"json_files: {us_en_json_files}")
-    file_utils.delete_files_except("temp", us_en_json_files)
+    # en_us.jsonファイルと、同じディレクトリにあるja_jp.jsonのパスのリストを作成
+    files_to_keep = []
+    for us_en_json_file in us_en_json_files:
+        files_to_keep.append(us_en_json_file)
+        # 同じディレクトリにあるja_jp.jsonも保持対象に追加
+        ja_jp_file = os.path.join(os.path.dirname(us_en_json_file), "ja_jp.json")
+        if os.path.exists(ja_jp_file):
+            files_to_keep.append(ja_jp_file)
+
+    # 保持するファイル以外を削除
+    file_utils.clean_directory("temp", files_to_keep)
     # リソースパックのフォルダを作成、pack.mcmetaを作成
     if (
         file_utils.gen_pack_dir(
