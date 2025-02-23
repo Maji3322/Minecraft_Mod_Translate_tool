@@ -1,4 +1,5 @@
-name: Simple Test
+# .github/workflows/main.yml
+name: Compile with Nuitka and Release
 
 on:
   push:
@@ -6,8 +7,68 @@ on:
       - 'v*'
 
 jobs:
-  test:
-        runs-on: ubuntu-latest
-        steps:
-          - name: Echo Test
-            run: echo "Workflow triggered!"
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # v2からv4へ
+
+      - name: Set up Python
+        uses: actions/setup-python@v5 # v4からv5へ。versionの指定方法変更
+        with:
+          python-version: '3.11'  # v3.11.9から3.11へ
+
+      - name: Cache Nuitka and ccache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.ccache
+            ~/.nuitka
+          key: ${{ runner.os }}-nuitka-ccache-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-nuitka-ccache-
+        
+      - name: Install dependencies  # 依存関係のインストールステップを追加
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install ccache (choco)
+        shell: bash # 異なるshellを使う処理をまとめた
+        run: |
+          choco install ccache -y
+          echo "export NUITKA_CCACHE_BINARY=$(which ccache)" >> $GITHUB_ENV
+      
+      - name: Compile with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          script-name: main.py
+          onefile: true
+          windows-disable-console: true
+          windows-icon-from-ico: "resources/icon.ico"
+          include-data-dir: "resources=resources"
+          # follow-imports: true  # Nuitkaはデフォルトで再帰的にインポートを追跡します。明示的に指定する必要はありません。
+          # standalone: true # onefile: true とした場合は自動的にstandaloneになる。明示的に指定する必要なし
+          output-dir: "build"  # 出力ディレクトリを明示（デフォルトはdistだが、慣例に倣いbuildへ）
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1  # こちらもv1.0.1からv1へ
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/main.exe
+          asset_name: main.exe
+          asset_content_type: application/vnd.microsoft.portable-executable # exeのContent-Type
