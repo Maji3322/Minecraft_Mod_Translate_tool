@@ -1,14 +1,64 @@
 import json
+import random
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
 from venv import logger
 
+import httpcore
 import tqdm
 from googletrans import Translator
 
 import gui_module
 
 completed_translations = []
+
+
+def retry_on_timeout(max_retries=3, base_delay=2):
+    """
+    タイムアウトエラーが発生した場合に指数バックオフでリトライする装飾子
+
+    Args:
+        max_retries: 最大リトライ回数
+        base_delay: 基本待機時間（秒）
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            retries = 0
+            while retries <= max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except httpcore._exceptions.ReadTimeout as e:
+                    retries += 1
+                    if retries > max_retries:
+                        raise
+                    # 指数バックオフ + ランダム要素を加える（ジッター）
+                    delay = base_delay * (2 ** (retries - 1)) + random.uniform(0, 1)
+                    print(
+                        f"翻訳タイムアウト、{delay:.2f}秒後に{retries}回目のリトライ..."
+                    )
+                    time.sleep(delay)
+
+        return wrapper
+
+    return decorator
+
+
+@retry_on_timeout(max_retries=5, base_delay=3)
+def translate_with_retry(translator, text, dest="ja"):
+    """
+    リトライ機能付きの翻訳関数
+
+    Args:
+        translator: Translatorインスタンス
+        text: 翻訳するテキスト
+        dest: 翻訳先言語
+    Returns:
+        翻訳結果
+    """
+    return translator.translate(text, dest=dest)
 
 
 def translate_json(lang_file_path, page):
@@ -55,7 +105,7 @@ def translate_json(lang_file_path, page):
             for key, value in en_json.items():
                 if isinstance(value, str):
                     try:
-                        result = translator.translate(value, dest="ja")
+                        result = translate_with_retry(translator, value, dest="ja")
                         # TODO:いつかここに専用辞書を配備したい
                         # Google翻訳では半角記号が全角記号に変換されてしまうことがあるため、カラースキーマのために置換。
                         result.text = result.text.replace("％", " %").replace("$ ", "$")
@@ -83,7 +133,9 @@ def translate_json(lang_file_path, page):
                     for sub_key, sub_value in value.items():
                         if isinstance(sub_value, str):
                             try:
-                                result = translator.translate(sub_value, dest="ja")
+                                result = translate_with_retry(
+                                    translator, sub_value, dest="ja"
+                                )
                                 ja_dict[sub_key] = result.text
                                 translated_strings += 1
                                 pbar.update(1)
