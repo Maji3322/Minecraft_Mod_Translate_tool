@@ -7,7 +7,7 @@ from typing import Dict, Optional
 
 class Config:
     """Configuration manager for the application."""
-    
+
     # Minecraft version to pack format mapping
     VERSION_TO_PACK_FORMAT: Dict[str, int] = {
         "1.13 ~ 1.14.4": 4,
@@ -25,42 +25,47 @@ class Config:
         "1.21 ~ 1.21.3": 35,
         "1.21.4": 46,
     }
-    
+
     # Application directories
     TEMP_DIR = "temp"
     OUTPUT_DIR = "translate_rp"
     LOGS_DIR = "logs"
     RESOURCES_DIR = "resources"
-    
+
     # UI theme colors
     COLORS = {
-        "primary": "#5B8FF9",      # Main color (vibrant blue)
-        "background": "#1E1E2E",   # Background color (dark)
-        "card": "#2A2A3C",         # Card background (deeper color)
-        "text": "#FFFFFF",         # Text color (white)
-        "secondary": "#334656",    # Secondary color (for button backgrounds, etc.)
-        "accent": "#6C7693",       # Accent color
-        "divider": "#5B8FF9",      # Divider line
-        "error": "#FF5555",        # Error display
+        "primary": "#5B8FF9",  # Main color (vibrant blue)
+        "background": "#1E1E2E",  # Background color (dark)
+        "card": "#2A2A3C",  # Card background (deeper color)
+        "text": "#FFFFFF",  # Text color (white)
+        "secondary": "#334656",  # Secondary color (for button backgrounds, etc.)
+        "accent": "#6C7693",  # Accent color
+        "divider": "#5B8FF9",  # Divider line
+        "error": "#FF5555",  # Error display
     }
-    
+
     # Translation settings
     MAX_TRANSLATION_RETRIES = 5
     TRANSLATION_RETRY_BASE_DELAY = 3
-    
+
     def __init__(self):
         self._pack_format: Optional[int] = None
-        
+
     @property
     def pack_format(self) -> Optional[int]:
         """Get the current pack format."""
         return self._pack_format
-        
+
     @pack_format.setter
-    def pack_format(self, value: int):
-        """Set the pack format."""
+    def pack_format(self, value: Optional[int]):
+        """
+        Set the pack format.
+
+        Args:
+            value: The pack format to set, or None to unset it.
+        """
         self._pack_format = value
-        
+
     def get_pack_format_for_version(self, version: str) -> Optional[int]:
         """Get the pack format for a Minecraft version."""
         return self.VERSION_TO_PACK_FORMAT.get(version)

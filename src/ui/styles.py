@@ -13,7 +13,7 @@ COLORS = config.COLORS
 def create_theme() -> ft.Theme:
     """
     Create the application theme.
-    
+
     Returns:
         The application theme
     """
@@ -23,15 +23,17 @@ def create_theme() -> ft.Theme:
     )
 
 
-def create_app_bar(page: ft.Page, on_help_click=None, on_github_click=None) -> ft.AppBar:
+def create_app_bar(
+    page: ft.Page, on_help_click=None, on_github_click=None
+) -> ft.AppBar:
     """
     Create the application bar.
-    
+
     Args:
         page: The page to add the app bar to
         on_help_click: Callback for help button click
         on_github_click: Callback for GitHub button click
-        
+
     Returns:
         The application bar
     """
@@ -76,22 +78,18 @@ def create_app_bar(page: ft.Page, on_help_click=None, on_github_click=None) -> f
 
 
 def create_button(
-    text: str,
-    icon: str,
-    on_click=None,
-    visible: bool = True,
-    animate: bool = True
+    text: str, icon: str, on_click=None, visible: bool = True, animate: bool = True
 ) -> ft.TextButton:
     """
     Create a styled button.
-    
+
     Args:
         text: Button text
         icon: Button icon
         on_click: Click event handler
         visible: Whether the button is visible
         animate: Whether to animate the button
-        
+
     Returns:
         The styled button
     """
@@ -105,29 +103,26 @@ def create_button(
         visible=visible,
         on_click=on_click,
     )
-    
+
     if animate:
         button.offset = ft.Offset(0, 0.5)
         button.animate_offset = ft.Animation(300, ft.AnimationCurve.EASE_OUT)
-    
+
     return button
 
 
 def create_dropdown(
-    label: str,
-    options: list,
-    width: int = 300,
-    on_change=None
+    label: str, options: list, width: int = 300, on_change=None
 ) -> ft.Dropdown:
     """
     Create a styled dropdown.
-    
+
     Args:
         label: Dropdown label
         options: Dropdown options
         width: Dropdown width
         on_change: Change event handler
-        
+
     Returns:
         The styled dropdown
     """
@@ -146,10 +141,10 @@ def create_dropdown(
 def create_card(content: ft.Control) -> ft.Card:
     """
     Create a styled card.
-    
+
     Args:
         content: Card content
-        
+
     Returns:
         The styled card
     """

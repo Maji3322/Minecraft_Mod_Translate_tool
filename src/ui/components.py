@@ -22,6 +22,17 @@ LOADING_CONTAINER_KEY = "loading_container"
 EXTRACTION_CARD_TEXT = "MODファイルの解凍"  # 定数を定義
 
 
+def initialize_page_data(page: ft.Page) -> None:
+    """
+    Ensure that the page has a data attribute initialized as a dictionary.
+
+    Args:
+        page: The page to initialize data for
+    """
+    if not hasattr(page, "data") or page.data is None:
+        page.data = {}
+
+
 def show_dialog(
     page: ft.Page,
     title: str,
@@ -62,8 +73,9 @@ def show_dialog(
     )
 
     # Show dialog
-    page.dialog = dialog
-    dialog.open = True
+    # Assign dialog to page (Page stub may not define this attribute)
+    page.dialog = dialog  # type: ignore[attr-defined]
+    dialog.open = True  # type: ignore[attr-defined]
     page.update()
 
 
@@ -112,8 +124,8 @@ def show_github_dialog(page: ft.Page) -> None:
         ],
     )
 
-    page.dialog = dialog
-    dialog.open = True
+    page.dialog = dialog  # type: ignore[attr-defined]
+    dialog.open = True  # type: ignore[attr-defined]
     page.update()
 
 
@@ -152,6 +164,9 @@ def make_loading_indicator(page: ft.Page) -> ft.Container:
     )
 
     # Store the loading container in page data
+    initialize_page_data(page)
+
+    # 確実に page.data が None でないことを再確認
     if not hasattr(page, "data") or page.data is None:
         page.data = {}
 
