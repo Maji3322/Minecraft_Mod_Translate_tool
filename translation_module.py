@@ -1,15 +1,18 @@
 import json
+import logging  # 修正: from venv import logger を import logging に変更
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
-from venv import logger
 
 import httpcore
 import tqdm
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 
 import gui_module
+
+# ロガーを取得
+logger = logging.getLogger(__name__)
 
 completed_translations = []
 
@@ -30,14 +33,22 @@ def retry_on_timeout(max_retries=3, base_delay=2):
             while retries <= max_retries:
                 try:
                     return func(*args, **kwargs)
-                except httpcore._exceptions.ReadTimeout as e:
+                # httpcore._exceptions.ReadTimeout を Exception に変更
+                except (
+                    Exception
+                ) as e:  # httpcore._exceptions.ReadTimeout を Exception に変更
                     retries += 1
                     if retries > max_retries:
+                        # エラーメッセージにタイムアウトの可能性を示唆する文言を追加
+                        logger.error(
+                            f"翻訳中にエラーが発生しました（タイムアウトの可能性あり）: {e}"
+                        )
                         raise
                     # 指数バックオフ + ランダム要素を加える（ジッター）
                     delay = base_delay * (2 ** (retries - 1)) + random.uniform(0, 1)
                     print(
-                        f"翻訳タイムアウト、{delay:.2f}秒後に{retries}回目のリトライ..."
+                        # エラーメッセージを汎用的なものに変更
+                        f"翻訳中にエラーが発生しました。{delay:.2f}秒後に{retries}回目のリトライ..."
                     )
                     time.sleep(delay)
 
@@ -47,18 +58,21 @@ def retry_on_timeout(max_retries=3, base_delay=2):
 
 
 @retry_on_timeout(max_retries=5, base_delay=3)
-def translate_with_retry(translator, text, dest="ja"):
+def translate_with_retry(
+    translator, text, dest="ja"
+):  # dest引数はdeep_translatorでは不要だが、互換性のために残す（内部では使用しない）
     """
     リトライ機能付きの翻訳関数
 
     Args:
-        translator: Translatorインスタンス
+        translator: Translatorインスタンス (GoogleTranslator)
         text: 翻訳するテキスト
-        dest: 翻訳先言語
+        dest: 翻訳先言語 (deep_translatorではコンストラクタで指定するため、この引数は使用されない)
     Returns:
         翻訳結果
     """
-    return translator.translate(text, dest=dest)
+    # translator.translate(text, dest=dest) を translator.translate(text) に変更
+    return translator.translate(text)
 
 
 def translate_json(lang_file_path, page):
@@ -70,7 +84,8 @@ def translate_json(lang_file_path, page):
 
     start_time = time.time()
     try:
-        translator = Translator()
+        # translator = Translator() を GoogleTranslator に変更
+        translator = GoogleTranslator(source="auto", target="ja")
 
         logger.info("=" * 20)
         logger.info("%sの翻訳を開始します。", lang_file_path)
@@ -105,11 +120,21 @@ def translate_json(lang_file_path, page):
             for key, value in en_json.items():
                 if isinstance(value, str):
                     try:
-                        result = translate_with_retry(translator, value, dest="ja")
+                        # result = translate_with_retry(translator, value, dest="ja") を変更
+                        # dest引数はtranslate_with_retry内で無視される
+                        result = translate_with_retry(translator, value)
                         # TODO:いつかここに専用辞書を配備したい
                         # Google翻訳では半角記号が全角記号に変換されてしまうことがあるため、カラースキーマのために置換。
-                        result.text = result.text.replace("％", " %").replace("$ ", "$")
-                        ja_json[key] = result.text
+                        # result.text を result に変更
+                        if result is not None:  # resultがNoneでないことを確認
+                            result = result.replace("％", " %").replace("$ ", "$")
+                        else:
+                            # 翻訳結果がNoneの場合の処理（例：エラーログ、デフォルト値設定など）
+                            logger.warning(
+                                f"Translation returned None for value: {value}"
+                            )
+                            result = value  # 元の値をそのまま使用するか、あるいはエラーを示す文字列を設定
+                        ja_json[key] = result  # result.text を result に変更
                         translated_strings += 1
                         gui_module.progress_bar_update(
                             progressbar,
@@ -133,10 +158,18 @@ def translate_json(lang_file_path, page):
                     for sub_key, sub_value in value.items():
                         if isinstance(sub_value, str):
                             try:
-                                result = translate_with_retry(
-                                    translator, sub_value, dest="ja"
-                                )
-                                ja_dict[sub_key] = result.text
+                                # result = translate_with_retry(translator, sub_value, dest="ja") を変更
+                                result = translate_with_retry(translator, sub_value)
+                                # result.text を result に変更
+                                if result is not None:  # resultがNoneでないことを確認
+                                    ja_dict[sub_key] = (
+                                        result  # result.text を result に変更
+                                    )
+                                else:
+                                    logger.warning(
+                                        f"Translation returned None for sub_value: {sub_value}"
+                                    )
+                                    ja_dict[sub_key] = sub_value  # 元の値をそのまま使用
                                 translated_strings += 1
                                 pbar.update(1)
                             except Exception as e:
