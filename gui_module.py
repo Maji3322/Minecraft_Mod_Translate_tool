@@ -12,8 +12,6 @@ import webbrowser
 import flet as ft
 import pyperclip
 
-import main
-
 # カラーパレットの定義
 COLORS = {
     "primary": "#5B8FF9",  # メインカラー（より鮮やかな青）
@@ -29,6 +27,14 @@ COLORS = {
 logger = logging.getLogger(__name__)
 
 
+# pageオブジェクトにカスタムデータを格納するためのキー
+PROGRESS_CONTAINER_KEY = "progress_container"
+LOADING_CONTAINER_KEY = "loading_container"
+
+# グローバル変数としてpack_formatを定義し、初期値を設定
+pack_format: int | None = None
+
+
 def err_dlg(page: ft.Page, err_title: str, err_msg: str):
     """
     指定されたエラーメッセージを含むエラーダイアログを表示します。
@@ -38,17 +44,10 @@ def err_dlg(page: ft.Page, err_title: str, err_msg: str):
     """
 
     def close_dlg(e):  # eは使用しないが、仮の引数が必要
-        err_dlg.open = False
+        alert_dialog.open = False
         page.update()
 
-    def dlg_open():
-        page.dialog = err_dlg
-        err_dlg.open = True
-        logger.debug(f"Page state before update: {page}")
-        page.update()
-        logger.debug(f"Page state after update: {page}")
-
-    err_dlg = ft.AlertDialog(
+    alert_dialog = ft.AlertDialog(
         title=ft.Text(err_title),
         modal=True,
         content=ft.Text(err_msg),
@@ -57,8 +56,12 @@ def err_dlg(page: ft.Page, err_title: str, err_msg: str):
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
-
-    dlg_open()
+    page.dialog = alert_dialog  # type: ignore # 修正
+    alert_dialog.open = True  # 修正
+    page.update()  # 修正
+    # page.show_dialog( # 修正前
+    #     alert_dialog
+    # )  # 修正: page.dialogへの代入ではなく、page.show_dialog()を使用
 
 
 def end_dlg(page: ft.Page, end_msg: str):
@@ -66,33 +69,48 @@ def end_dlg(page: ft.Page, end_msg: str):
     指定されたエラーメッセージを含むエラーダイアログを表示します。
     Args:
         page (ft.Page): エラーダイアログが表示されるページオブジェクトです。
-        err_msg (str): ダイアログに表示されるエラーメッセージです。
+        end_msg (str): ダイアログに表示されるエラーメッセージです。
     """
 
     def close_dlg(e):  # eは使用しないが、仮の引数が必要
-        err_dlg.open = False
+        alert_dialog.open = False
         page.update()
         sys.exit(0)
 
-    def dlg_open():
-        page.dialog = err_dlg
-        err_dlg.open = True
-        page.update()
-
-    err_dlg = ft.AlertDialog(
+    alert_dialog = ft.AlertDialog(
         title=ft.Text("翻訳完了"),
         modal=True,
-        content=ft.Text(end_dlg),
+        content=ft.Text(end_msg),
         actions=[
             ft.TextButton("閉じる", on_click=close_dlg),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
+    page.dialog = alert_dialog  # type: ignore # 修正
+    alert_dialog.open = True  # 修正
+    page.update()  # 修正
+    # page.show_dialog( # 修正前
+    #     alert_dialog
+    # )  # 修正: page.dialogへの代入ではなく、page.show_dialog()を使用
 
-    dlg_open()
+
+def return_pack_format() -> int:
+    """
+    選択されたMinecraftバージョンのpack_formatを返す関数。
+    未選択の場合は0を返す。
+    """
+    global pack_format
+    if pack_format is None:
+        # ユーザーにバージョン選択を促すか、デフォルト値を設定
+        # ここでは例として0を返すが、適切なエラー処理やデフォルト値設定が望ましい
+        logger.warning("pack_formatが選択されていません。デフォルト値0を返します。")
+        return 0
+    return pack_format
 
 
-def select_file(e: ft.FilePickerResultEvent, page: ft.Page):
+def select_file(
+    e: ft.FilePickerResultEvent, page: ft.Page, process_app_func
+):  # process_app_func を追加
     """
     ファイル選択ダイアログを表示し、選択されたファイルのパスをGUI上に表示する。
     選択されたファイルに対して、ready_translate関数を実行し、翻訳処理を行う。
@@ -103,31 +121,38 @@ def select_file(e: ft.FilePickerResultEvent, page: ft.Page):
     """
 
     global file_names
-    file_paths = [
-        file.path for file in e.files
-    ]  # ファイル選択ダイアログで選択されたファイルのパスを取得
-    file_names = list(
-        [os.path.basename(file_name) for file_name in file_paths]
-    )  # 選択されたファイルの名前を取得
+    if e.files:
+        file_paths = [
+            file.path for file in e.files if file.path  # Noneチェックを追加
+        ]  # ファイル選択ダイアログで選択されたファイルのパスを取得
+        if (
+            not file_paths
+        ):  # file_pathsが空リストの場合（全てのfile.pathがNoneだった場合など）
+            selected_files.value = "有効なファイルが選択されませんでした。"
+            selected_files.update()
+            err_dlg(page, "エラー", "有効なjarファイルが見つかりませんでした。")
+            return
 
-    # ファイルのパスをボタンの右側に表示
-    ft.Text(file_paths, width=300, style=ft.TextStyle(bgcolor=COLORS["background"]))
-    selected_files.value = (
-        ", ".join(map(lambda f: f.name, e.files))
-        if e.files
-        else "キャンセルされました!"
-    )
-    selected_files.update()
+        file_names = list(
+            [os.path.basename(file_name) for file_name in file_paths]
+        )  # 選択されたファイルの名前を取得
 
-    # 翻訳処理を別のスレッドで実行
-    if not file_paths == []:  # ファイルが選択された場合
-        main.process_app(file_paths, file_names, page)
+        selected_files.value = ", ".join([os.path.basename(p) for p in file_paths])
+        selected_files.update()
+
+        # 翻訳処理を別のスレッドで実行
+        process_app_func(
+            file_paths, file_names, page
+        )  # main.process_app を process_app_func に変更
     else:
-        # file_pathsが空の場合、エラーメッセージを表示して関数を終了
-        err_dlg(page, "エラー", "jarファイルが見つかりませんでした。")
+        selected_files.value = "キャンセルされました!"
+        selected_files.update()
+        # err_dlg(page, "情報", "ファイル選択がキャンセルされました。") # ユーザー起因なのでエラーダイアログは不要かもしれません
 
 
-def select_file_from_clipboard(page: ft.Page):
+def select_file_from_clipboard(
+    page: ft.Page, process_app_func
+):  # process_app_func を追加
     """
     pyperclipを使用してクリップボードからファイルパスを取得し、その中のjarファイルをリストとして取得する関数。
     取得したファイルパスはプリントされる。
@@ -165,14 +190,16 @@ def select_file_from_clipboard(page: ft.Page):
 
     if not file_paths == []:  # ファイルが選択された場合
         # それぞれのファイルを解凍→assets直下を
-        main.process_app(file_paths, file_names, page)
+        process_app_func(
+            file_paths, file_names, page
+        )  # main.process_app を process_app_func に変更
     else:
         # file_pathsが空の場合、エラーメッセージを表示して関数を終了
         err_dlg(page, "エラー", "フォルダの中にjarファイルが存在しませんでした。")
         return
 
 
-def start_gui(page: ft.Page):
+def start_gui(page: ft.Page, process_app_callback):  # process_app_callback を追加
     """
     GUIの初期設定を行う関数
 
@@ -237,13 +264,20 @@ def start_gui(page: ft.Page):
     def dropdown_changed(e):
         """ドロップダウンの値が変更されたときに呼び出される関数"""
         global pack_format
-        pack_format = int(version_dict[dd.value])
-        # アニメーションでボタンを表示
-        button1.visible = True
-        button2.visible = True
-        button1.offset = ft.transform.Offset(0, 0)
-        button2.offset = ft.transform.Offset(0, 0)
-        page.update()
+        if dd.value:  # Noneチェック
+            pack_format = int(version_dict[dd.value])
+            # アニメーションでボタンを表示
+            button1.visible = True
+            button2.visible = True
+            button1.offset = ft.Offset(0, 0)
+            button2.offset = ft.Offset(0, 0)
+            page.update()
+        else:
+            # dd.valueがNoneの場合の処理（例：エラー表示やデフォルト値設定）
+            pack_format = None  # または適切なデフォルト値
+            button1.visible = False
+            button2.visible = False
+            page.update()
 
     def confirmOpenGitHub():
         def close_dlg(e):
@@ -266,13 +300,16 @@ def start_gui(page: ft.Page):
                 ft.TextButton(
                     "開く",
                     on_click=openGitHub,
-                    style=ft.ButtonStyle(color="primary"),
+                    style=ft.ButtonStyle(color=COLORS["primary"]),
                 ),
             ],
         )
-        page.dialog = dlg
-        dlg.open = True
-        page.update()
+        page.dialog = dlg  # type: ignore # 修正
+        dlg.open = True  # 修正
+        page.update()  # 修正
+        # page.show_dialog( # 修正前
+        #     dlg
+        # )  # 修正: page.dialogへの代入ではなく、page.show_dialog()を使用
 
     # モダンなAppBarデザイン
     page.appbar = ft.AppBar(
@@ -330,7 +367,9 @@ def start_gui(page: ft.Page):
         options=[ft.dropdown.Option(version) for version in version_dict.keys()],
     )
 
-    pick_file_dialog = ft.FilePicker(on_result=lambda result: select_file(result, page))
+    pick_file_dialog = ft.FilePicker(
+        on_result=lambda result: select_file(result, page, process_app_callback)
+    )  # process_app_callback を渡す
     page.overlay.append(pick_file_dialog)
 
     global selected_files
@@ -348,11 +387,11 @@ def start_gui(page: ft.Page):
             color=COLORS["text"],
         ),
         visible=False,
-        offset=ft.transform.Offset(0, 0.5),  # 初期位置を下に
-        animate_offset=ft.animation.Animation(300, "easeOut"),
-        on_click=lambda e: pick_file_dialog.pick_files(
+        offset=ft.Offset(0, 0.5),
+        animate_offset=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
+        on_click=lambda _: pick_file_dialog.pick_files(
             allow_multiple=True,
-            initial_directory=os.path.expanduser("~\\Downloads"),
+            initial_directory=os.path.expanduser("~\\\\Downloads"),
             allowed_extensions=["jar"],
             dialog_title="翻訳するMODのjarファイルを選択(複数選択可)",
         ),
@@ -366,9 +405,11 @@ def start_gui(page: ft.Page):
             color=COLORS["text"],
         ),
         visible=False,
-        offset=ft.transform.Offset(0, 0.5),  # 初期位置を下に
-        animate_offset=ft.animation.Animation(300, "easeOut"),
-        on_click=lambda e: select_file_from_clipboard(page),
+        offset=ft.Offset(0, 0.5),
+        animate_offset=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
+        on_click=lambda _: select_file_from_clipboard(
+            page, process_app_callback
+        ),  # process_app_callback を渡す
     )
 
     # メインコンテンツをカードで囲む
@@ -401,15 +442,22 @@ def start_gui(page: ft.Page):
         )
     )
 
-    def page_resize(e):
+    def page_resize_handler(
+        e,
+    ):  # 関数名を変更し、Fletのイベントハンドラとして正しく機能するようにする
         """ウィンドウサイズ変更時にスクロール枠のサイズを更新"""
-        if hasattr(page, "progress_container"):
-            # スクロールコンテナの高さを更新
-            page.progress_container.height = page.window_height - 150
-            page.update()
+        if page.data is None:
+            page.data = {}
+        progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+        if progress_container and isinstance(progress_container, ft.Container):
+            if (
+                page.window is not None and page.window.height is not None
+            ):  # page.window と page.window.height の None チェックを追加
+                progress_container.height = page.window.height - 150
+                page.update()
 
     # ウィンドウサイズ変更イベントのハンドラを設定
-    page.on_resize = page_resize
+    page.on_resize = page_resize_handler  # type: ignore # 修正: 正しいイベントハンドラを設定
 
 
 def hide_selection_ui(page: ft.Page):
@@ -420,15 +468,18 @@ def hide_selection_ui(page: ft.Page):
         page (ft.Page): ページオブジェクト
     """
     # メインコンテンツを取得（最初のCard）
-    main_card = None
-    for control in page.controls:
-        if isinstance(control, ft.Container) and isinstance(control.content, ft.Card):
-            main_card = control
-            break
+    main_card_container = None
+    if page.controls:  # page.controls が None でないことを確認
+        for control in page.controls:
+            if isinstance(control, ft.Container) and isinstance(
+                control.content, ft.Card
+            ):
+                main_card_container = control
+                break
 
-    if main_card:
+    if main_card_container:
         # メインカードを非表示
-        main_card.visible = False
+        main_card_container.visible = False
         page.update()
 
 
@@ -510,8 +561,11 @@ def make_progress_bar(page: ft.Page, lang_file_path):
     )
 
     # スクロール可能なコンテナがまだない場合は作成
-    if not hasattr(page, "progress_container"):
-        page.progress_container = ft.Container(
+    if page.data is None:
+        page.data = {}
+    progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+    if not progress_container:
+        progress_container = ft.Container(
             content=ft.Column(
                 controls=[],
                 scroll=ft.ScrollMode.AUTO,
@@ -521,13 +575,17 @@ def make_progress_bar(page: ft.Page, lang_file_path):
             ),
             margin=ft.margin.only(top=20, bottom=20),
             # ウィンドウの高さからAppBarとマージンを引いた高さに設定
-            height=page.window_height - 150,  # AppBarの高さ(64px)+ 上下マージン(86px)
+            height=(
+                (page.window.height - 150) if page.window.height else 550
+            ),  # AppBarの高さ(64px)+ 上下マージン(86px)
             expand=True,  # コンテナを利用可能なスペースいっぱいに広げる
         )
-        page.add(page.progress_container)
+        page.data[PROGRESS_CONTAINER_KEY] = progress_container
+        page.add(progress_container)
 
     # 新しいプログレスカードを追加
-    page.progress_container.content.controls.append(progress_card)
+    if isinstance(progress_container.content, ft.Column):
+        progress_container.content.controls.append(progress_card)
     page.update()
 
     return pb, show_info
@@ -563,13 +621,6 @@ def progress_bar_update(
             f"logger info:\npb.value={pb.value}\ni={i}\ntotal_strings={total_strings}\nshow_info.value={show_info.value}"
         )
         raise
-
-
-def return_pack_format():
-    """
-    ドロップダウンで選択されたバージョンに対応するpack_formatを返す関数
-    """
-    return int(pack_format)
 
 
 def make_extract_progress(page: ft.Page):
@@ -634,23 +685,28 @@ def make_extract_progress(page: ft.Page):
     )
 
     # スクロール可能なコンテナを作成・更新
-    if not hasattr(page, "progress_container"):
-        page.progress_container = ft.Container(
+    if page.data is None:
+        page.data = {}
+    progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+    if not progress_container:
+        progress_container = ft.Container(
             content=ft.Column(
                 controls=[],
                 scroll=ft.ScrollMode.AUTO,
                 spacing=10,
-                # 下部に余白を追加してスクロール時も見やすく
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             margin=ft.margin.only(top=20, bottom=20),
-            # ウィンドウの高さからAppBarとマージンを引いた高さに設定
-            height=page.window_height - 150,  # AppBarの高さ(64px)+ 上下マージン(86px)
-            expand=True,  # コンテナを利用可能なスペースいっぱいに広げる
+            height=(
+                (page.window.height - 150) if page.window.height else 550
+            ),  # AppBarの高さ(64px)+ 上下マージン(86px)
+            expand=True,
         )
-        page.add(page.progress_container)
+        page.data[PROGRESS_CONTAINER_KEY] = progress_container
+        page.add(progress_container)
 
-    page.progress_container.content.controls.append(progress_card)
+    if isinstance(progress_container.content, ft.Column):
+        progress_container.content.controls.append(progress_card)
     page.update()
 
     return pb, show_info
@@ -693,14 +749,21 @@ def hide_extract_progress(page: ft.Page):
     Args:
         page (ft.Page): ページオブジェクト
     """
-    if hasattr(page, "progress_container") and page.progress_container.content.controls:
-        # 最初のプログレスカード（解凍進捗）を非表示
-        extract_card = page.progress_container.content.controls[0]
-        page.progress_container.content.controls.remove(extract_card)
+    if page.data is None:
+        page.data = {}
+    progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+    if (
+        progress_container
+        and isinstance(progress_container.content, ft.Column)
+        and progress_container.content.controls
+    ):
+        if progress_container.content.controls:
+            extract_card = progress_container.content.controls[0]
+            progress_container.content.controls.remove(extract_card)
 
-        # ローディングインジケータを表示
-        show_loading(page)
-        page.update()
+            # ローディングインジケータを表示
+            show_loading(page)
+            page.update()
 
 
 def show_loading(page: ft.Page):
@@ -732,8 +795,11 @@ def show_loading(page: ft.Page):
         alignment=ft.alignment.center,
     )
 
-    if not hasattr(page, "progress_container"):
-        page.progress_container = ft.Container(
+    if page.data is None:
+        page.data = {}
+    progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+    if not progress_container:
+        progress_container = ft.Container(
             content=ft.Column(
                 controls=[],
                 scroll=ft.ScrollMode.AUTO,
@@ -741,13 +807,15 @@ def show_loading(page: ft.Page):
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             margin=ft.margin.only(top=20, bottom=20),
-            height=page.window_height - 150,
+            height=(page.window.height - 150) if page.window.height else 550,
             expand=True,
         )
-        page.add(page.progress_container)
+        page.data[PROGRESS_CONTAINER_KEY] = progress_container
+        page.add(progress_container)
 
-    page.progress_container.content.controls.append(loading_container)
-    page.loading_container = loading_container
+    if isinstance(progress_container.content, ft.Column):
+        progress_container.content.controls.append(loading_container)
+    page.data[LOADING_CONTAINER_KEY] = loading_container
     page.update()
 
 
@@ -758,7 +826,18 @@ def hide_loading(page: ft.Page):
     Args:
         page (ft.Page): ページオブジェクト
     """
-    if hasattr(page, "loading_container"):
-        page.progress_container.content.controls.remove(page.loading_container)
-        delattr(page, "loading_container")
+    if page.data is None:
+        page.data = {}
+    loading_container_instance = page.data.get(LOADING_CONTAINER_KEY)
+    progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+
+    if (
+        loading_container_instance
+        and progress_container
+        and isinstance(progress_container.content, ft.Column)
+    ):
+        if loading_container_instance in progress_container.content.controls:
+            progress_container.content.controls.remove(loading_container_instance)
+        if LOADING_CONTAINER_KEY in page.data:
+            del page.data[LOADING_CONTAINER_KEY]
         page.update()

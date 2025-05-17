@@ -15,4 +15,5 @@ main.onefile-build/
 .env.local
 tempCodeRunnerFile.py
 .vscode/
-
+.venv/
+.env
