@@ -294,6 +294,10 @@ def make_progress_bar(page: ft.Page, file_path: str) -> Tuple[ft.ProgressBar, ft
     else:
         # Add the progress card to the existing container
         if isinstance(progress_container, ft.Container) and isinstance(progress_container.content, ft.Column):
+            # Remove the extraction card if it exists
+            _remove_extraction_card(progress_container)
+            
+            # Add the new progress card
             progress_container.content.controls.append(progress_card)
             progress_container.visible = True
             page.update()
@@ -489,14 +493,59 @@ def update_extract_progress(
     page.update()
 
 
+def _remove_extraction_card(progress_container: ft.Container) -> bool:
+    """
+    Remove the extraction card from the progress container.
+    
+    Args:
+        progress_container: The progress container
+        
+    Returns:
+        True if the extraction card was found and removed, False otherwise
+    """
+    if not isinstance(progress_container, ft.Container) or not isinstance(progress_container.content, ft.Column):
+        return False
+    
+    # Find and remove the extraction card
+    for i, control in enumerate(progress_container.content.controls):
+        if isinstance(control, ft.Card) and isinstance(control.content, ft.Container):
+            container_content = control.content.content
+            if isinstance(container_content, ft.Column):
+                # Check if this is the extraction card by looking for "MODファイルの解凍" text
+                for sub_control in container_content.controls:
+                    if isinstance(sub_control, ft.Text) and sub_control.value == "MODファイルの解凍":
+                        # Remove this card
+                        progress_container.content.controls.pop(i)
+                        return True
+    
+    return False
+
+
 def hide_extract_progress(page: ft.Page) -> None:
     """
-    Hide the extraction progress bar.
+    Hide the extraction progress bar and remove it from the container.
     
     Args:
         page: The page containing the extraction progress bar
     """
-    hide_progress_bars(page)
+    if not hasattr(page, "data") or page.data is None:
+        page.data = {}
+    
+    progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+    
+    if progress_container:
+        # Remove the extraction card
+        removed = _remove_extraction_card(progress_container)
+        
+        # Hide the container if it's now empty
+        if removed and not progress_container.content.controls:
+            progress_container.visible = False
+        
+        page.update()
+    else:
+        logger.warning("Progress container not found in page data.")
+        # Fall back to the original behavior
+        hide_progress_bars(page)
 
 
 def hide_selection_ui(page: ft.Page) -> None:
