@@ -50,9 +50,6 @@ def retry_on_timeout(max_retries: int = 3, base_delay: int = 2) -> Callable:
                     delay = base_delay * (2 ** (retries - 1)) + random.uniform(0, 1)
                     logger.warning(f"Translation error. Retrying in {delay:.2f} seconds (attempt {retries})...")
                     time.sleep(delay)
-            
-            # This should never be reached due to the raise in the except block
-            raise TranslationError("Maximum retries exceeded")
         
         return wrapper
     
