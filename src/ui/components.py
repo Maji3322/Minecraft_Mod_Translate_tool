@@ -511,9 +511,9 @@ def _remove_extraction_card(progress_container: ft.Container) -> bool:
         if isinstance(control, ft.Card) and isinstance(control.content, ft.Container):
             container_content = control.content.content
             if isinstance(container_content, ft.Column):
-                # Check if this is the extraction card by looking for "MODファイルの解凍" text
+                # Check if this is the extraction card by looking for EXTRACTION_CARD_TEXT
                 for sub_control in container_content.controls:
-                    if isinstance(sub_control, ft.Text) and sub_control.value == "MODファイルの解凍":
+                    if isinstance(sub_control, ft.Text) and sub_control.value == EXTRACTION_CARD_TEXT:
                         # Remove this card
                         progress_container.content.controls.pop(i)
                         return True
