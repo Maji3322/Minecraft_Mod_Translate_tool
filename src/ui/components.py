@@ -1,0 +1,562 @@
+"""
+Reusable UI components for the application.
+"""
+
+import logging
+import os
+import time
+import webbrowser
+from typing import Callable, List, Optional, Tuple
+
+import flet as ft
+import pyperclip
+
+from ..utils.config import config
+from ..utils.exceptions import UIError
+
+logger = logging.getLogger(__name__)
+
+# Keys for storing UI components in page data
+PROGRESS_CONTAINER_KEY = "progress_container"
+LOADING_CONTAINER_KEY = "loading_container"
+
+
+def show_dialog(
+    page: ft.Page,
+    title: str,
+    content: str,
+    actions: Optional[List[ft.Control]] = None,
+    on_dismiss: Optional[Callable] = None,
+    modal: bool = True
+) -> None:
+    """
+    Show a dialog with the given title and content.
+    
+    Args:
+        page: The page to show the dialog on
+        title: Dialog title
+        content: Dialog content
+        actions: Dialog actions
+        on_dismiss: Callback when dialog is dismissed
+        modal: Whether the dialog is modal
+    """
+    def close_dialog(e):
+        dialog.open = False
+        page.update()
+        if on_dismiss:
+            on_dismiss()
+    
+    # Default close button if no actions provided
+    if actions is None:
+        actions = [ft.TextButton("閉じる", on_click=close_dialog)]
+    
+    # Create dialog
+    dialog = ft.AlertDialog(
+        title=ft.Text(title),
+        content=ft.Text(content) if isinstance(content, str) else content,
+        actions=actions,
+        actions_alignment=ft.MainAxisAlignment.END,
+        modal=modal,
+    )
+    
+    # Show dialog
+    page.dialog = dialog
+    dialog.open = True
+    page.update()
+
+
+def show_error_dialog(page: ft.Page, title: str, message: str) -> None:
+    """
+    Show an error dialog.
+    
+    Args:
+        page: The page to show the dialog on
+        title: Dialog title
+        message: Error message
+    """
+    show_dialog(page, title, message)
+
+
+def show_github_dialog(page: ft.Page) -> None:
+    """
+    Show a dialog to confirm opening GitHub.
+    
+    Args:
+        page: The page to show the dialog on
+    """
+    def open_github(e):
+        webbrowser.open("https://github.com/Maji3429/new-mc-mod-translating-tool")
+        close_dialog(e)
+    
+    def close_dialog(e):
+        dialog.open = False
+        page.update()
+    
+    dialog = ft.AlertDialog(
+        modal=True,
+        title=ft.Text("GitHub", size=20),
+        content=ft.Container(
+            content=ft.Text("GitHubのリンクを開きますか？"),
+            padding=20,
+        ),
+        actions=[
+            ft.TextButton("キャンセル", on_click=close_dialog),
+            ft.TextButton(
+                "開く",
+                on_click=open_github,
+                style=ft.ButtonStyle(color=config.COLORS["primary"]),
+            ),
+        ],
+    )
+    
+    page.dialog = dialog
+    dialog.open = True
+    page.update()
+
+
+def make_loading_indicator(page: ft.Page) -> ft.Container:
+    """
+    Create a loading indicator.
+    
+    Args:
+        page: The page to add the loading indicator to
+        
+    Returns:
+        The loading indicator container
+    """
+    loading_container = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.ProgressRing(
+                    width=50,
+                    height=50,
+                    stroke_width=4,
+                    color=config.COLORS["primary"],
+                ),
+                ft.Text(
+                    "処理中...",
+                    color=config.COLORS["text"],
+                    size=16,
+                    weight=ft.FontWeight.BOLD,
+                ),
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=10,
+        ),
+        alignment=ft.alignment.center,
+        expand=True,
+        visible=False,
+    )
+    
+    # Store the loading container in page data
+    if not hasattr(page, "data") or page.data is None:
+        page.data = {}
+    
+    page.data[LOADING_CONTAINER_KEY] = loading_container
+    page.add(loading_container)
+    
+    return loading_container
+
+
+def show_loading(page: ft.Page) -> None:
+    """
+    Show the loading indicator.
+    
+    Args:
+        page: The page containing the loading indicator
+    """
+    if not hasattr(page, "data") or page.data is None:
+        page.data = {}
+    
+    loading_container = page.data.get(LOADING_CONTAINER_KEY)
+    
+    if loading_container and isinstance(loading_container, ft.Container):
+        loading_container.visible = True
+        page.update()
+    else:
+        logger.warning("Loading container not found in page data.")
+
+
+def hide_loading(page: ft.Page) -> None:
+    """
+    Hide the loading indicator.
+    
+    Args:
+        page: The page containing the loading indicator
+    """
+    if not hasattr(page, "data") or page.data is None:
+        page.data = {}
+    
+    loading_container = page.data.get(LOADING_CONTAINER_KEY)
+    
+    if loading_container and isinstance(loading_container, ft.Container):
+        loading_container.visible = False
+        page.update()
+    else:
+        logger.warning("Loading container not found in page data.")
+
+
+def make_progress_bar(page: ft.Page, file_path: str) -> Tuple[ft.ProgressBar, ft.Text]:
+    """
+    Create a progress bar for translation.
+    
+    Args:
+        page: The page to add the progress bar to
+        file_path: The path of the file being translated
+        
+    Returns:
+        A tuple containing the progress bar and info text
+    """
+    # Hide loading indicator if visible
+    hide_loading(page)
+    
+    # Get the MOD name from the file path
+    file_name = os.path.basename(os.path.dirname(os.path.dirname(file_path)))
+    
+    # Create progress bar and info text
+    progress_bar = ft.ProgressBar(
+        width=300,
+        color=config.COLORS["primary"],
+        bgcolor=config.COLORS["card"],
+    )
+    
+    info_text = ft.Text(
+        "翻訳中...",
+        color=config.COLORS["text"],
+        size=14,
+    )
+    
+    # Create a card with the progress bar
+    progress_card = ft.Card(
+        content=ft.Container(
+            padding=20,
+            content=ft.Row(
+                controls=[
+                    # Left column (MOD name)
+                    ft.Container(
+                        content=ft.Text(
+                            f"{file_name}",
+                            color=config.COLORS["text"],
+                            size=16,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        alignment=ft.alignment.center,
+                        expand=True,
+                    ),
+                    # Divider
+                    ft.VerticalDivider(
+                        width=1,
+                        color=config.COLORS["divider"],
+                    ),
+                    # Right column (progress)
+                    ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                info_text,
+                                progress_bar,
+                            ],
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            spacing=10,
+                        ),
+                        alignment=ft.alignment.center,
+                        expand=True,
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+        ),
+        elevation=4,
+        color=config.COLORS["card"],
+    )
+    
+    # Create or get the progress container
+    if not hasattr(page, "data") or page.data is None:
+        page.data = {}
+    
+    progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+    
+    if not progress_container:
+        # Create a new container for progress cards
+        progress_container = ft.Container(
+            content=ft.Column(
+                controls=[progress_card],
+                spacing=10,
+                scroll=ft.ScrollMode.AUTO,
+            ),
+            padding=20,
+            height=page.window.height - 150 if page.window and page.window.height else 500,
+            visible=True,
+        )
+        
+        # Store the container in page data
+        page.data[PROGRESS_CONTAINER_KEY] = progress_container
+        page.add(progress_container)
+    else:
+        # Add the progress card to the existing container
+        if isinstance(progress_container, ft.Container) and isinstance(progress_container.content, ft.Column):
+            progress_container.content.controls.append(progress_card)
+            progress_container.visible = True
+            page.update()
+    
+    return progress_bar, info_text
+
+
+def update_progress_bar(
+    progress_bar: ft.ProgressBar,
+    current: int,
+    total: int,
+    info_text: ft.Text,
+    page: ft.Page,
+    start_time: float
+) -> None:
+    """
+    Update a progress bar.
+    
+    Args:
+        progress_bar: The progress bar to update
+        current: Current progress
+        total: Total progress
+        info_text: Info text to update
+        page: The page containing the progress bar
+        start_time: Time when the operation started
+    """
+    # Calculate progress
+    progress = current / total if total > 0 else 0
+    progress_bar.value = progress
+    
+    # Calculate elapsed time and estimated time remaining
+    elapsed_time = time.time() - start_time
+    if current > 0:
+        estimated_total_time = elapsed_time * total / current
+        remaining_time = estimated_total_time - elapsed_time
+        
+        # Format time strings
+        elapsed_str = format_time(elapsed_time)
+        remaining_str = format_time(remaining_time)
+        
+        info_text.value = f"翻訳中... {current}/{total} ({progress:.1%}) - 残り時間: {remaining_str}"
+    else:
+        info_text.value = f"翻訳中... {current}/{total} ({progress:.1%})"
+    
+    # Update the page
+    page.update()
+
+
+def format_time(seconds: float) -> str:
+    """
+    Format time in seconds to a human-readable string.
+    
+    Args:
+        seconds: Time in seconds
+        
+    Returns:
+        Formatted time string
+    """
+    if seconds < 60:
+        return f"{seconds:.1f}秒"
+    elif seconds < 3600:
+        minutes = seconds / 60
+        return f"{minutes:.1f}分"
+    else:
+        hours = seconds / 3600
+        return f"{hours:.1f}時間"
+
+
+def hide_progress_bars(page: ft.Page) -> None:
+    """
+    Hide all progress bars.
+    
+    Args:
+        page: The page containing the progress bars
+    """
+    if not hasattr(page, "data") or page.data is None:
+        page.data = {}
+    
+    progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+    
+    if progress_container and isinstance(progress_container, ft.Container):
+        progress_container.visible = False
+        page.update()
+    else:
+        logger.warning("Progress container not found in page data.")
+
+
+def make_extract_progress(page: ft.Page) -> Tuple[ft.ProgressBar, ft.Text]:
+    """
+    Create a progress bar for extraction.
+    
+    Args:
+        page: The page to add the progress bar to
+        
+    Returns:
+        A tuple containing the progress bar and info text
+    """
+    # Create progress bar and info text
+    progress_bar = ft.ProgressBar(
+        width=300,
+        color=config.COLORS["primary"],
+        bgcolor=config.COLORS["card"],
+    )
+    
+    info_text = ft.Text(
+        "解凍中...",
+        color=config.COLORS["text"],
+        size=14,
+    )
+    
+    # Create a card with the progress bar
+    extract_card = ft.Card(
+        content=ft.Container(
+            padding=20,
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "MODファイルの解凍",
+                        color=config.COLORS["text"],
+                        size=16,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    info_text,
+                    progress_bar,
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=10,
+            ),
+        ),
+        elevation=4,
+        color=config.COLORS["card"],
+    )
+    
+    # Create or get the progress container
+    if not hasattr(page, "data") or page.data is None:
+        page.data = {}
+    
+    progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
+    
+    if not progress_container:
+        # Create a new container for progress cards
+        progress_container = ft.Container(
+            content=ft.Column(
+                controls=[extract_card],
+                spacing=10,
+                scroll=ft.ScrollMode.AUTO,
+            ),
+            padding=20,
+            height=page.window.height - 150 if page.window and page.window.height else 500,
+            visible=True,
+        )
+        
+        # Store the container in page data
+        page.data[PROGRESS_CONTAINER_KEY] = progress_container
+        page.add(progress_container)
+    else:
+        # Add the extract card to the existing container
+        if isinstance(progress_container, ft.Container) and isinstance(progress_container.content, ft.Column):
+            progress_container.content.controls = [extract_card]  # Replace existing controls
+            progress_container.visible = True
+            page.update()
+    
+    return progress_bar, info_text
+
+
+def update_extract_progress(
+    progress_bar: ft.ProgressBar,
+    current: int,
+    total: int,
+    info_text: ft.Text,
+    page: ft.Page,
+    file_name: str
+) -> None:
+    """
+    Update the extraction progress bar.
+    
+    Args:
+        progress_bar: The progress bar to update
+        current: Current progress
+        total: Total progress
+        info_text: Info text to update
+        page: The page containing the progress bar
+        file_name: Name of the file being extracted
+    """
+    # Calculate progress
+    progress = current / total if total > 0 else 0
+    progress_bar.value = progress
+    
+    # Update info text
+    info_text.value = f"解凍中... {current}/{total} ({progress:.1%}) - {file_name}"
+    
+    # Update the page
+    page.update()
+
+
+def hide_extract_progress(page: ft.Page) -> None:
+    """
+    Hide the extraction progress bar.
+    
+    Args:
+        page: The page containing the extraction progress bar
+    """
+    hide_progress_bars(page)
+
+
+def hide_selection_ui(page: ft.Page) -> None:
+    """
+    Hide the version selection and file selection UI.
+    
+    Args:
+        page: The page containing the selection UI
+    """
+    # Find the main card container
+    main_card_container = None
+    
+    if page.controls:
+        for control in page.controls:
+            if isinstance(control, ft.Container) and isinstance(control.content, ft.Card):
+                main_card_container = control
+                break
+    
+    if main_card_container:
+        main_card_container.visible = False
+        page.update()
+    else:
+        logger.warning("Main card container not found.")
+
+
+def select_file_from_clipboard(page: ft.Page, process_callback: Callable) -> None:
+    """
+    Select files from the clipboard path.
+    
+    Args:
+        page: The page
+        process_callback: Callback to process the selected files
+    """
+    try:
+        # Get the path from clipboard
+        mods_path = pyperclip.paste().replace('"', "")
+        
+        # Check if the path exists
+        if not os.path.exists(mods_path):
+            show_error_dialog(page, "エラー", "クリップボードにファイルパスがありません。")
+            return
+        
+        # Get all JAR files in the directory
+        file_paths = [
+            os.path.join(mods_path, file)
+            for file in os.listdir(mods_path)
+            if file.endswith(".jar")
+        ]
+        
+        if not file_paths:
+            show_error_dialog(page, "エラー", "フォルダの中にjarファイルが存在しませんでした。")
+            return
+        
+        # Get file names
+        file_names = [os.path.basename(file_path) for file_path in file_paths]
+        
+        # Process the files
+        process_callback(file_paths, file_names, page)
+    
+    except Exception as e:
+        logger.error(f"Error selecting files from clipboard: {e}", exc_info=True)
+        show_error_dialog(page, "エラー", f"ファイル選択中にエラーが発生しました: {str(e)}")
+        raise UIError("Failed to select files from clipboard") from e
