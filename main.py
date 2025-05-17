@@ -16,9 +16,9 @@ import os
 import sys
 import time
 
+import flet
 import flet as ft
-from googletrans import Translator
-from plyer import notification
+from flet import AppView
 
 import file_utils
 import gui_module
@@ -37,9 +37,6 @@ rh = logging.handlers.RotatingFileHandler(
 )  # ログローテーションを設定
 logger.addHandler(rh)  # ログハンドラーを追加
 logger.info("===== START =====")  # ログを出力
-
-# Google翻訳APIを使うための初期設定
-translator = Translator()
 
 # ログの設定をコンソールにも出力するように設定
 console_handler = logging.StreamHandler()
@@ -133,7 +130,9 @@ def process_app(file_paths, file_names, page):
     # リソースパックのフォルダを作成、pack.mcmetaを作成
     if (
         file_utils.gen_pack_dir(
-            str(gui_module.return_pack_format()), page, us_en_json_files
+            str(gui_module.return_pack_format()),
+            page,
+            us_en_json_files,  # 修正: gui_module.pack_format を gui_module.return_pack_format() に変更
         )
         == 0
     ):
@@ -152,19 +151,65 @@ def process_app(file_paths, file_names, page):
         logger.info("翻訳が完了しました。")
         gui_module.err_dlg(page, "完了", "全ての翻訳が完了しました。")
         # 翻訳完了を通知
-        notification.notify(
-            title="翻訳完了",
-            message="すべての翻訳が完了しました。",
-            app_name="MC-MOD Translating tool",
-            app_icon="resources/icon.ico",
-        )
+        success_count = len(lang_file_paths)  # 成功した翻訳の数をカウント
+        if success_count > 0:
+            logger.info(f"{success_count}個のMODの翻訳が完了しました。")
+            try:
+                from plyer import notification  # ローカルインポートに変更
+
+                # notification オブジェクトが存在し、notify メソッドが呼び出し可能であることを確認
+                if (
+                    notification
+                    and hasattr(notification, "notify")
+                    and callable(notification.notify)
+                ):
+                    base_dir = (
+                        os.path.dirname(os.path.abspath(__file__))
+                        if not getattr(sys, "frozen", False)
+                        else os.path.dirname(sys.executable)
+                    )
+                    icon_path = os.path.join(base_dir, "resources", "icon.ico")
+                    if not os.path.exists(icon_path):
+                        logger.warning(f"Notification icon not found at {icon_path}")
+                        effective_icon_path = ""  # または None、plyerの仕様による
+                    else:
+                        effective_icon_path = icon_path
+
+                    notification.notify(
+                        title="翻訳完了",
+                        message=f"{success_count}個のMODの翻訳が完了しました。",
+                        app_name="MC-MOD Translating tool",
+                        app_icon=effective_icon_path,
+                        timeout=10,
+                    )
+                else:
+                    # notify メソッドが利用できない場合のログ
+                    if not notification:
+                        logger.warning(
+                            "Plyer notification object (plyer.notification) is None. Skipping notification."
+                        )
+                    elif not hasattr(notification, "notify"):
+                        logger.warning(
+                            "Plyer notification object (plyer.notification) does not have a 'notify' attribute. Skipping notification."
+                        )
+                    else:  # not callable(notification.notify)
+                        logger.warning(
+                            "The 'notify' attribute of plyer.notification is not callable. Skipping notification."
+                        )
+            except ImportError:
+                logger.warning("Plyer library not found. Skipping notification.")
+            except Exception as e:
+                logger.error(f"Failed to send notification via Plyer: {e}")
+        else:
+            logger.info("翻訳対象のファイルが見つからなかったか、すべて失敗しました。")
         # translate_rpフォルダの上のフォルダを開く
         os.startfile(os.path.dirname("translate_rp"))
 
-        def destroy():
-            page.window_destroy()
+        # def destroy(): # 修正前
+        #     page.window_destroy() # 修正前
 
-        destroy()
+        # destroy() # 修正前
+        page.window.close()  # 修正: Fletでウィンドウを閉じる正しい方法
         # プログラムを終了する
         sys.exit()
 
@@ -178,19 +223,10 @@ def main(page: ft.Page):
     """
     メインアプリケーションのエントリーポイント
     """
-    try:
-        logger.info("Initializing GUI")
-        logger.debug("Page state before GUI initialization: %s", page)
-        from gui_module import start_gui  # 循環参照を避けるためにここでインポート
-
-        start_gui(page)
-        logger.debug("Page state after GUI initialization: %s", page)
-        logger.info("GUI initialized successfully")
-    except Exception as e:
-        logger.error("Error initializing GUI: %s", e, exc_info=True)
-        raise
+    gui_module.start_gui(page, process_app)  # 修正: gui_module.start_gui を呼び出す
 
 
 if __name__ == "__main__":
     # Fletアプリケーションの開始
-    ft.app(target=main, assets_dir="assets")
+    # ft.app(target=main, assets_dir="resources")
+    ft.app(target=main, view=AppView.FLET_APP, assets_dir="resources")
