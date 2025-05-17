@@ -17,19 +17,14 @@ def main():
     # Set up logging
     logger = setup_root_logger()
     logger.info("Starting Minecraft MOD Translator Tool")
-    
+
     # Ensure resources directory exists
     resources_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "resources"
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources"
     )
-    
+
     # Start the Flet application
-    ft.app(
-        target=start_app,
-        view=AppView.FLET_APP,
-        assets_dir=resources_dir
-    )
+    ft.app(target=start_app, view=AppView.FLET_APP, assets_dir=resources_dir)
 
 
 if __name__ == "__main__":
