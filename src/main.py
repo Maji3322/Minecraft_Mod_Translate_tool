@@ -17,6 +17,10 @@ def main():
     # Set up logging
     logger = setup_root_logger()
     logger.info("Starting Minecraft MOD Translator Tool")
+    # 未捕捉例外をログに記録する
+    sys.excepthook = lambda exc_type, exc_value, exc_tb: logger.exception(
+        "Uncaught exception", exc_info=(exc_type, exc_value, exc_tb)
+    )
 
     # Ensure resources directory exists
     resources_dir = os.path.join(
@@ -24,7 +28,16 @@ def main():
     )
 
     # Start the Flet application
-    ft.app(target=start_app, view=AppView.FLET_APP, assets_dir=resources_dir)
+    try:
+        ft.app(
+            target=start_app,
+            view=AppView.FLET_APP,
+            assets_dir=resources_dir,
+        )
+    except Exception:
+        logger.exception("Unhandled exception when running Flet app")
+        # 例外を再スローしてプロセスを異常終了させる
+        raise
 
 
 if __name__ == "__main__":
