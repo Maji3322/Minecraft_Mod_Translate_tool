@@ -73,18 +73,20 @@ GUI ライブラリも迷い、Tkinter から CustomTkinter、最終的には Fl
 
 ---
 
-## googletransの制限について
+## googletrans の制限について
 
 googletrans は Google 翻訳の非公式 API です。
 (こちら)[https://github.com/ssut/py-googletrans/issues/257#issuecomment-867051570]には、
+
 > 現在、Google 翻訳 API は 1 秒あたり 5 回の呼び出しを許可しており、1 日あたり 20 万回に制限されています。
-とされています。
+> とされています。
 
 いきなり翻訳できなくなった場合は、この制限に達した可能性があります。
 
 ```bash
 AttributeError: 'Translator' object has no attribute 'raise_Exception'. Did you mean: 'raise_exception'?
 ```
+
 このエラーは、この制限によるもので、一時的に翻訳ができなくなることがあります。
 
 ということで、翻訳ができなくなった場合は、しばらく待ってから再度実行してください。
