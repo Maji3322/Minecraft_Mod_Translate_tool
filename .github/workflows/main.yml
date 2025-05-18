@@ -44,7 +44,7 @@ jobs:
               uses: Nuitka/Nuitka-Action@main
               with:
                   script-name: main.py
-                  onefile: true
+                  mode: onefile
                   windows-disable-console: true
                   windows-icon-from-ico: "resources/icon.ico"
                   include-data-dir: "resources=resources"
