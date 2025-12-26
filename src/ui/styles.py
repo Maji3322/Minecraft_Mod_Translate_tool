@@ -44,7 +44,7 @@ def create_app_bar(
         ),
         leading_width=40,
         title=ft.Text(
-            "MC MOD Translator Tool",
+            f"MC MOD Translator Tool v{config.get_app_version()}",
             size=24,
             weight=ft.FontWeight.BOLD,
             color=COLORS["text"],
