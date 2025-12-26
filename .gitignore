@@ -18,3 +18,5 @@ tempCodeRunnerFile.py
 .venv/
 .env
 dist
+*.egg-info/
+build/
