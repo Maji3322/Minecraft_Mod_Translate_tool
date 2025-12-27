@@ -2,6 +2,8 @@
 Configuration management for the application.
 """
 
+import os
+import tomllib
 from typing import Dict, Optional
 
 
@@ -69,6 +71,29 @@ class Config:
     def get_pack_format_for_version(self, version: str) -> Optional[int]:
         """Get the pack format for a Minecraft version."""
         return self.VERSION_TO_PACK_FORMAT.get(version)
+
+    def get_app_version(self) -> str:
+        """
+        Get the application version from pyproject.toml.
+        
+        Returns:
+            The version string from pyproject.toml, or "unknown" if not found.
+        """
+        try:
+            # Get the project root directory (parent of src)
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(os.path.dirname(current_dir))
+            pyproject_path = os.path.join(project_root, "pyproject.toml")
+            
+            with open(pyproject_path, "rb") as f:
+                data = tomllib.load(f)
+                return data.get("project", {}).get("version", "unknown")
+        except (FileNotFoundError, tomllib.TOMLDecodeError):
+            # ファイルが見つからない、またはパースエラーの場合
+            return "unknown"
+        except Exception:
+            # その他の予期しないエラー
+            return "unknown"
 
 
 # Create a global config instance
