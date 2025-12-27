@@ -22,6 +22,8 @@ jobs:
                   VERSION=${GITHUB_REF_NAME#v}
                   
                   # Validate semantic versioning format (X.Y.Z)
+                  # Note: This only accepts basic semantic versions (X.Y.Z).
+                  # Pre-release versions (e.g., 1.0.0-alpha) are not supported.
                   if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
                       echo "Error: Invalid version format '$VERSION'. Expected semantic version (e.g., 0.8.0)"
                       exit 1
@@ -35,10 +37,46 @@ jobs:
               run: |
                   VERSION="${{ steps.get_version.outputs.version }}"
                   
-                  # Update version in [project] section only
-                  sed -i '/^\[project\]/,/^\[/ s/^version = .*/version = "'"$VERSION"'"/' pyproject.toml
+                  # NOTE:
+                  # This updates the version in pyproject.toml only within the CI
+                  # build environment so that the built artifact embeds the tag
+                  # version. These changes are not committed back to the repository,
+                  # so pyproject.toml in the repo may show an older version.
                   
-                  echo "Updated pyproject.toml with version $VERSION"
+                  # Update version in [project] section only using Python for robust parsing
+                  export VERSION
+                  python - << 'PY'
+                  import os
+                  import pathlib
+                  import re
+                  
+                  version = os.environ["VERSION"]
+                  path = pathlib.Path("pyproject.toml")
+                  lines = path.read_text(encoding="utf-8").splitlines()
+                  
+                  in_project = False
+                  updated = False
+                  
+                  for index, line in enumerate(lines):
+                      if re.match(r'^\[project\]\s*$', line):
+                          in_project = True
+                          continue
+                      
+                      if in_project and re.match(r'^\[(?!project\.)', line):
+                          break
+                      
+                      if in_project and line.startswith("version = "):
+                          lines[index] = f'version = "{version}"'
+                          updated = True
+                          break
+                  
+                  if not updated:
+                      raise SystemExit("version = line not found in [project] section of pyproject.toml")
+                  
+                  path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                  PY
+                  
+                  echo "Updated pyproject.toml with version $VERSION (CI-only change)"
                   grep "^version = " pyproject.toml
 
             - name: Set up Python

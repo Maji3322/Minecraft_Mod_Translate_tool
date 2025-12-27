@@ -88,8 +88,8 @@ class Config:
             with open(pyproject_path, "rb") as f:
                 data = tomllib.load(f)
                 return data.get("project", {}).get("version", "unknown")
-        except (FileNotFoundError, tomllib.TOMLDecodeError, KeyError):
-            # ファイルが見つからない、パースエラー、キーが存在しない場合
+        except (FileNotFoundError, tomllib.TOMLDecodeError):
+            # ファイルが見つからない、またはパースエラーの場合
             return "unknown"
         except Exception:
             # その他の予期しないエラー
