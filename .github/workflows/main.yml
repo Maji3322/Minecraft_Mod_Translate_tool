@@ -17,6 +17,71 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v4
 
+            - name: Extract version from tag
+              id: get_version
+              shell: bash
+              run: |
+                  # Extract version from tag (e.g., v0.8.0 -> 0.8.0)
+                  VERSION=${GITHUB_REF_NAME#v}
+                  
+                  # Validate semantic versioning format (X.Y.Z)
+                  # Note: This only accepts basic semantic versions (X.Y.Z).
+                  # Pre-release versions (e.g., 1.0.0-alpha) are not supported.
+                  if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                      echo "Error: Invalid version format '$VERSION'. Expected semantic version (e.g., 0.8.0)"
+                      exit 1
+                  fi
+                  
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "Version extracted and validated: $VERSION"
+
+            - name: Update version in pyproject.toml
+              shell: bash
+              run: |
+                  VERSION="${{ steps.get_version.outputs.version }}"
+                  
+                  # NOTE:
+                  # This updates the version in pyproject.toml only within the CI
+                  # build environment so that the built artifact embeds the tag
+                  # version. These changes are not committed back to the repository,
+                  # so pyproject.toml in the repo may show an older version.
+                  
+                  # Update version in [project] section only using Python for robust parsing
+                  export VERSION
+                  python - << 'PY'
+                  import os
+                  import pathlib
+                  import re
+                  
+                  version = os.environ["VERSION"]
+                  path = pathlib.Path("pyproject.toml")
+                  lines = path.read_text(encoding="utf-8").splitlines()
+                  
+                  in_project = False
+                  updated = False
+                  
+                  for index, line in enumerate(lines):
+                      if re.match(r'^\[project\]\s*$', line):
+                          in_project = True
+                          continue
+                      
+                      if in_project and re.match(r'^\[(?!project\.)', line):
+                          break
+                      
+                      if in_project and line.startswith("version = "):
+                          lines[index] = f'version = "{version}"'
+                          updated = True
+                          break
+                  
+                  if not updated:
+                      raise SystemExit("version = line not found in [project] section of pyproject.toml")
+                  
+                  path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                  PY
+                  
+                  echo "Updated pyproject.toml with version $VERSION (CI-only change)"
+                  grep "^version = " pyproject.toml
+
             - name: Set up Python
               uses: actions/setup-python@v5
               with:
@@ -53,23 +118,17 @@ jobs:
                   include-data-dir: "resources=resources"
                   output-dir: "dist"
 
-            - name: Create release
-              id: create_release
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: ${{ github.ref_name }}
-                  release_name: Release ${{ github.ref_name }}
-                  draft: false
-                  prerelease: false
+            - name: Rename executable to include version
+              shell: bash
+              run: |
+                  VERSION="${{ steps.get_version.outputs.version }}"
+                  mv dist/main.exe "dist/MinecraftModTranslateTool-v${VERSION}.exe"
+                  echo "Renamed to MinecraftModTranslateTool-v${VERSION}.exe"
 
             - name: Upload Release Asset
-              uses: actions/upload-release-asset@v1
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: dist/MinecraftModTranslateTool-v${{ steps.get_version.outputs.version }}.exe
+                  fail_on_unmatched_files: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: ./dist/main.exe
-                  asset_name: main.exe
-                  asset_content_type: application/vnd.microsoft.portable-executable
