@@ -460,7 +460,17 @@ class MinecraftModTranslatorApp:
                     logger.error(f"Failed to send notification: {e}", exc_info=True)
 
             # Open output directory
-            os.startfile(os.path.dirname(config.OUTPUT_DIR))
+            output_dir = os.path.abspath(os.path.dirname(config.OUTPUT_DIR))
+            try:
+                if sys.platform.startswith("win"):
+                    os.startfile(output_dir)
+                else:
+                    webbrowser.open(f"file://{output_dir}")
+            except Exception as e:
+                # Failure behavior: log a warning and continue closing the app.
+                logger.warning(
+                    f"Failed to open output directory: {output_dir} ({e})"
+                )
 
             # Close the window
             page.window.close()

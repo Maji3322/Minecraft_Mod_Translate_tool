@@ -142,35 +142,36 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
 
         # Set up progress tracking
         if page:
-            from ..ui.components import make_progress_bar, update_progress_bar
+            from ..ui.components import make_progress_bar
 
             progressbar, info_msg = make_progress_bar(page, lang_file_path)
 
         translated_strings = 0
         pbar = tqdm(total=total_strings, position=0, leave=True)
 
-        # Translate the JSON
-        for key, value in en_json.items():
+        def record_translation_progress() -> None:
+            nonlocal translated_strings
+            translated_strings += 1
+            pbar.update(1)
+            if page and progressbar and info_msg:
+                from ..ui.components import update_progress_bar
+
+                # パフォーマンス注意: 頻繁なUI更新は描画負荷が増える可能性があります。
+                update_progress_bar(
+                    progressbar,
+                    translated_strings,
+                    total_strings,
+                    info_msg,
+                    page,
+                    start_time,
+                )
+
+        def translate_value(value: Any) -> Any:
             if isinstance(value, str):
                 try:
                     result = translate_text(translator, value)
-                    ja_json[key] = result
-                    translated_strings += 1
-
-                    # Update progress
-                    if page and progressbar and info_msg:
-                        from ..ui.components import update_progress_bar
-
-                        update_progress_bar(
-                            progressbar,
-                            translated_strings,
-                            total_strings,
-                            info_msg,
-                            page,
-                            start_time,
-                        )
-
-                    pbar.update(1)
+                    record_translation_progress()
+                    return result
                 except Exception as e:
                     logger.error(
                         f"Error translating {lang_file_path}: {e}", exc_info=True
@@ -178,26 +179,15 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
                     raise TranslationError(
                         f"Failed to translate {lang_file_path}"
                     ) from e
-            elif isinstance(value, dict):
-                ja_dict = {}
-                for sub_key, sub_value in value.items():
-                    if isinstance(sub_value, str):
-                        try:
-                            result = translate_text(translator, sub_value)
-                            ja_dict[sub_key] = result
-                            translated_strings += 1
-                            pbar.update(1)
-                        except Exception as e:
-                            logger.error(
-                                f"Error translating {lang_file_path}: {e}",
-                                exc_info=True,
-                            )
-                            raise TranslationError(
-                                f"Failed to translate {lang_file_path}"
-                            ) from e
-                    else:
-                        ja_dict[sub_key] = sub_value
-                ja_json[key] = ja_dict
+            if isinstance(value, dict):
+                return {
+                    sub_key: translate_value(sub_value)
+                    for sub_key, sub_value in value.items()
+                }
+            return value
+
+        # Translate the JSON
+        ja_json = {key: translate_value(value) for key, value in en_json.items()}
 
         # Write the translated JSON
         output_path = lang_file_path.replace("en_us.json", "ja_jp.json")
@@ -217,6 +207,7 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
 
     except (json.JSONDecodeError, IOError, TranslationError) as e:
         logger.error(f"Error translating {lang_file_path}: {e}", exc_info=True)
+        # Failure behavior: wrap and re-raise TranslationError to abort translation.
         raise TranslationError(f"Failed to translate {lang_file_path}") from e
 
 
