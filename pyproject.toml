@@ -33,7 +33,7 @@ dependencies = [
     "click==8.2.0",
     "colorama==0.4.6",
     "cookiecutter==2.6.0",
-    "deep-translator==1.11.4",
+    "openai==1.58.1",
     "fastapi==0.115.12",
     "flet==0.28.2",
     "flet-cli==0.28.2",

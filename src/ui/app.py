@@ -57,7 +57,7 @@ class MinecraftModTranslatorApp:
         # Set window icon
         self._set_window_icon(page)
 
-        # Create app bar
+        # Create app bar with settings button
         page.appbar = styles.create_app_bar(
             page,
             on_help_click=lambda e: components.show_dialog(
@@ -66,6 +66,7 @@ class MinecraftModTranslatorApp:
                 "このアプリケーションは、MinecraftのMODを翻訳するためのツールです。一部翻訳できないMODがあります。",
             ),
             on_github_click=lambda e: components.show_github_dialog(page),
+            on_settings_click=lambda e: self._show_settings_dialog(page),
         )
 
         # Create file picker
@@ -232,6 +233,23 @@ class MinecraftModTranslatorApp:
             # Display cancel message
             self.selected_files_text.value = "キャンセルされました!"  # type: ignore[attr-defined]
             self.selected_files_text.update()  # type: ignore[attr-defined]
+
+    def _show_settings_dialog(self, page: ft.Page) -> None:
+        """
+        Show the OpenRouter settings dialog.
+
+        Args:
+            page: The page
+        """
+        def on_settings_saved():
+            """Callback when settings are saved."""
+            components.show_dialog(
+                page,
+                "設定保存完了",
+                f"OpenRouter設定が保存されました。\n\nモデル: {config.OPENROUTER_MODEL}\nフォールバック数: {len(config.FALLBACK_MODELS)}",
+            )
+
+        components.show_openrouter_settings_dialog(page, on_settings_saved)
 
     def _handle_window_resize(self, e, page: ft.Page) -> None:
         """
