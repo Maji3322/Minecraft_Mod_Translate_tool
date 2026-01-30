@@ -21,6 +21,41 @@ logger = logging.getLogger(__name__)
 # Type variable for generic function
 T = TypeVar("T")
 
+# Shared OpenAI client instance for connection pooling
+_openrouter_client: Optional[OpenAI] = None
+
+
+def get_openrouter_client() -> OpenAI:
+    """
+    Get or create a shared OpenRouter client instance.
+    
+    This function ensures a single client instance is reused across all
+    translation calls for efficient connection pooling.
+    
+    Returns:
+        OpenAI client configured for OpenRouter
+        
+    Raises:
+        TranslationError: If API key is not configured
+    """
+    global _openrouter_client
+    
+    # APIキーのチェック（空白や空文字列も検出）
+    if not config.OPENROUTER_API_KEY or not config.OPENROUTER_API_KEY.strip():
+        raise TranslationError(
+            "OpenRouter API key is not set or is empty. Please set OPENROUTER_API_KEY in .env file."
+        )
+    
+    # クライアントがまだ作成されていない場合は作成
+    if _openrouter_client is None:
+        _openrouter_client = OpenAI(
+            base_url=config.OPENROUTER_BASE_URL,
+            api_key=config.OPENROUTER_API_KEY
+        )
+        logger.info(f"Created OpenRouter client with model: {config.OPENROUTER_MODEL}")
+    
+    return _openrouter_client
+
 
 def retry_on_timeout(max_retries: int = 3, base_delay: int = 2) -> Callable:
     """
@@ -115,6 +150,16 @@ def translate_text(client: OpenAI, text: str) -> str:
         return result
 
     except Exception as e:
+        error_msg = str(e).lower()
+        # 認証エラーやモデルが見つからない場合は即座に失敗
+        if any(
+            keyword in error_msg
+            for keyword in ["authentication", "unauthorized", "invalid api key", "not found", "model"]
+        ):
+            logger.error(f"Non-retryable error during LLM translation: {e}")
+            raise TranslationError(f"LLM translation failed (non-retryable): {e}") from e
+        
+        # その他のエラーはリトライ可能として扱う
         logger.error(f"Error during LLM translation: {e}", exc_info=True)
         raise TranslationError(f"LLM translation failed: {e}") from e
 
@@ -140,16 +185,8 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
     info_msg = None
 
     try:
-        # OpenRouter API キーのチェック
-        if not config.OPENROUTER_API_KEY:
-            raise TranslationError(
-                "OpenRouter API key is not set. Please set OPENROUTER_API_KEY in .env file."
-            )
-
-        # OpenRouter用のOpenAIクライアントを初期化
-        client = OpenAI(
-            base_url=config.OPENROUTER_BASE_URL, api_key=config.OPENROUTER_API_KEY
-        )
+        # 共有クライアントを取得（APIキーチェック含む）
+        client = get_openrouter_client()
 
         logger.info(
             f"Starting LLM translation of {lang_file_path} using model: {config.OPENROUTER_MODEL}"
