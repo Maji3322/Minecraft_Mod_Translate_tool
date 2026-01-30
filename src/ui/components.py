@@ -704,6 +704,32 @@ def show_openrouter_settings_dialog(page: ft.Page, on_save: Callable) -> None:
     # Loading indicator
     loading_text = ft.Text("", color=config.COLORS["text"], size=12)
 
+    # Initialize fallback models from config
+    def initialize_fallback_models():
+        """Initialize fallback models from configuration."""
+        if hasattr(config, "FALLBACK_MODELS") and config.FALLBACK_MODELS:
+            for model_name in config.FALLBACK_MODELS:
+                if not model_name:
+                    continue
+                fallback_tile = ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Text(model_name, size=12, expand=True),
+                            ft.IconButton(
+                                icon=ft.Icons.DELETE,
+                                icon_size=16,
+                                on_click=lambda e: None,  # Will be set correctly below
+                            ),
+                        ]
+                    ),
+                    data=model_name,
+                    bgcolor=config.COLORS["secondary"],
+                    padding=5,
+                    border_radius=5,
+                )
+                fallback_tile.controls[0].controls[1].on_click = lambda e, c=fallback_tile: remove_fallback(c)
+                fallback_models_column.controls.append(fallback_tile)
+
     def fetch_models_async():
         """Fetch models from OpenRouter API."""
         try:
@@ -800,7 +826,7 @@ def show_openrouter_settings_dialog(page: ft.Page, on_save: Callable) -> None:
                         ft.IconButton(
                             icon=ft.Icons.DELETE,
                             icon_size=16,
-                            on_click=lambda e, container=None: remove_fallback(container),
+                            on_click=lambda e: None,  # Placeholder, will be set below
                         ),
                     ]
                 ),
@@ -831,12 +857,20 @@ def show_openrouter_settings_dialog(page: ft.Page, on_save: Callable) -> None:
             show_error_dialog(page, "エラー", "モデルを選択してください")
             return
         
+        # Check if API key changed
+        api_key_changed = config.OPENROUTER_API_KEY != api_key
+        
         config.OPENROUTER_API_KEY = api_key
         config.OPENROUTER_MODEL = selected_model["value"]
         
         # Save fallback models
         fallback_list = [c.data for c in fallback_models_column.controls]
         config.FALLBACK_MODELS = fallback_list
+        
+        # Reset client cache if API key changed
+        if api_key_changed:
+            from ..core.translator import reset_openrouter_client
+            reset_openrouter_client()
         
         dialog.open = False
         page.update()
@@ -904,6 +938,9 @@ def show_openrouter_settings_dialog(page: ft.Page, on_save: Callable) -> None:
         actions_alignment=ft.MainAxisAlignment.END,
         modal=True,
     )
+
+    # Initialize fallback models from config
+    initialize_fallback_models()
 
     # Show dialog
     page.dialog = dialog

@@ -43,7 +43,7 @@ def get_openrouter_client() -> OpenAI:
     # APIキーのチェック（空白や空文字列も検出）
     if not config.OPENROUTER_API_KEY or not config.OPENROUTER_API_KEY.strip():
         raise TranslationError(
-            "OpenRouter API key is not set or is empty. Please set OPENROUTER_API_KEY in .env file."
+            "OpenRouter API key is not set or is empty. Please configure your OpenRouter API key in the application settings dialog (⚙️ icon)."
         )
     
     # クライアントがまだ作成されていない場合は作成
@@ -55,6 +55,18 @@ def get_openrouter_client() -> OpenAI:
         logger.info(f"Created OpenRouter client with model: {config.OPENROUTER_MODEL}")
     
     return _openrouter_client
+
+
+def reset_openrouter_client() -> None:
+    """
+    Reset the cached OpenRouter client instance.
+    
+    This should be called when the API key changes to ensure
+    the next translation uses the new API key.
+    """
+    global _openrouter_client
+    _openrouter_client = None
+    logger.info("Reset OpenRouter client cache")
 
 
 def retry_on_timeout(max_retries: int = 3, base_delay: int = 2) -> Callable:
@@ -166,22 +178,26 @@ def translate_text(client: OpenAI, text: str, model: str = "") -> str:
             error_msg = str(e).lower()
             last_error = e
             
-            # レート制限エラーの場合はフォールバックモデルを試す
-            if "429" in error_msg or "rate limit" in error_msg:
+            # レート制限エラー（429/402）の場合はフォールバックモデルを試す
+            if "429" in error_msg or "402" in error_msg or "rate limit" in error_msg:
                 logger.warning(f"Rate limit hit with model {attempt_model}, trying fallback...")
                 continue
             
-            # 認証エラーやモデルが見つからない場合は即座に失敗
+            # 認証エラーやAPIキーに関連する問題は全モデルに影響するため即座に失敗
             if any(
                 keyword in error_msg
-                for keyword in ["authentication", "unauthorized", "invalid api key", "not found", "model"]
+                for keyword in ["authentication", "unauthorized", "invalid api key", "api key", "access denied"]
             ):
-                logger.error(f"Non-retryable error during LLM translation: {e}")
-                raise TranslationError(f"LLM translation failed (non-retryable): {e}") from e
+                logger.error(f"Non-retryable authentication error during LLM translation: {e}")
+                raise TranslationError(f"LLM translation failed (non-retryable auth error): {e}") from e
             
-            # その他のエラーはリトライ可能として扱う
-            logger.error(f"Error during LLM translation with model {attempt_model}: {e}", exc_info=True)
-            raise TranslationError(f"LLM translation failed: {e}") from e
+            # その他のエラー（モデル固有のエラーなど）はフォールバックモデルを試す
+            logger.warning(
+                f"Error during LLM translation with model {attempt_model}: {e}. "
+                f"Trying fallback model if available...",
+                exc_info=True,
+            )
+            continue
     
     # All models failed
     if last_error:

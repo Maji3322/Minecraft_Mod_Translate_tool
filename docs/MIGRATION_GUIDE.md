@@ -39,7 +39,24 @@ pip install -r requirements.txt
 3. [APIキーページ](https://openrouter.ai/keys)でAPIキーを生成
 4. APIキーを安全な場所にコピー
 
-### 3. 環境設定ファイルの作成
+### 3. 設定方法
+
+**推奨方法**: UI設定ダイアログを使用
+
+1. アプリケーションを起動
+2. ⚙️（設定）アイコンをクリック
+3. APIキーを入力フィールドに貼り付け
+4. 「モデルを取得」ボタンをクリック
+5. 検索バーで目的のモデルを検索（例：「free」で無料モデル検索）
+6. 使用したいモデルをクリックして選択
+7. （オプション）レート制限対策としてフォールバックモデルを追加
+8. 「保存」をクリック
+
+**代替方法（開発者向け、非推奨）**: .env ファイル設定
+
+> **注意**: `.env`ファイル設定は非推奨です。セキュリティのため、UI設定（⚙️アイコン）を使用することを強く推奨します。
+
+開発者や高度なユーザー向けに、`.env`ファイルでの設定も可能です：
 
 プロジェクトのルートディレクトリに`.env`ファイルを作成します：
 
@@ -47,7 +64,7 @@ pip install -r requirements.txt
 # OpenRouter API Key（必須）
 OPENROUTER_API_KEY=sk-or-v1-your-actual-api-key-here
 
-# 使用するモデル（オプション、デフォルトは無料のLlamaモデル）
+# 使用するモデル（オプション）
 OPENROUTER_MODEL=meta-llama/llama-3.2-3b-instruct:free
 ```
 
@@ -65,12 +82,13 @@ python main.py
 
 ### エラー: "OpenRouter API key is not set"
 
-**原因**: `.env`ファイルが存在しないか、APIキーが設定されていません
+**原因**: APIキーが設定されていません
 
 **解決方法**:
-1. プロジェクトのルートディレクトリに`.env`ファイルを作成
-2. `OPENROUTER_API_KEY=your-key-here`を追加
-3. アプリケーションを再起動
+1. アプリケーションを起動
+2. ⚙️（設定）アイコンをクリック
+3. APIキーを入力して保存
+4. （代替）`.env`ファイルに`OPENROUTER_API_KEY=your-key-here`を追加してアプリを再起動
 
 ### エラー: "Model not found"
 

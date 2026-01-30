@@ -117,6 +117,8 @@ class OpenRouterAPI:
         error_str = str(error).lower()
         return (
             "429" in error_str
+            or "402" in error_str
             or "rate limit" in error_str
             or "too many requests" in error_str
+            or "payment required" in error_str
         )
