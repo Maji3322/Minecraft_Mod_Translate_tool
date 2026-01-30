@@ -6,6 +6,11 @@ import os
 import tomllib
 from typing import Dict, Optional
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 
 class Config:
     """Configuration manager for the application."""
@@ -49,6 +54,13 @@ class Config:
     # Translation settings
     MAX_TRANSLATION_RETRIES = 5
     TRANSLATION_RETRY_BASE_DELAY = 3
+
+    # OpenRouter settings
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_MODEL = os.getenv(
+        "OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct:free"
+    )
+    OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
     def __init__(self):
         self._pack_format: Optional[int] = None

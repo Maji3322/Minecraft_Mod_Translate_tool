@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 
-from deep_translator import GoogleTranslator
+from openai import OpenAI
 from tqdm import tqdm
 
 from ..utils.config import config
@@ -68,12 +68,12 @@ def retry_on_timeout(max_retries: int = 3, base_delay: int = 2) -> Callable:
     max_retries=config.MAX_TRANSLATION_RETRIES,
     base_delay=config.TRANSLATION_RETRY_BASE_DELAY,
 )
-def translate_text(translator: GoogleTranslator, text: str) -> str:
+def translate_text(client: OpenAI, text: str) -> str:
     """
-    Translate text with retry functionality.
+    Translate text using OpenRouter LLM with retry functionality.
 
     Args:
-        translator: The translator instance
+        client: The OpenAI client configured for OpenRouter
         text: The text to translate
 
     Returns:
@@ -82,21 +82,46 @@ def translate_text(translator: GoogleTranslator, text: str) -> str:
     Raises:
         TranslationError: If the translation fails after retries
     """
-    result = translator.translate(text)
+    try:
+        # LLMを使用した翻訳プロンプト
+        response = client.chat.completions.create(
+            model=config.OPENROUTER_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a professional translator specializing in video game localization. "
+                    "Translate the given English text to Japanese. "
+                    "Maintain game terminology, preserve special characters like %, $, and formatting. "
+                    "Return ONLY the translated text without any explanations or additional content.",
+                },
+                {"role": "user", "content": f"Translate to Japanese: {text}"},
+            ],
+            temperature=0.3,  # 低めの温度で一貫性のある翻訳を得る
+            max_tokens=500,
+        )
 
-    if result is None:
-        logger.warning(f"Translation returned None for text: {text}")
-        return text
+        result = response.choices[0].message.content
 
-    # Fix common translation issues
-    result = result.replace("％", " %").replace("$ ", "$")
+        if result is None:
+            logger.warning(f"Translation returned None for text: {text}")
+            return text
 
-    return result
+        # 翻訳結果をクリーンアップ
+        result = result.strip()
+
+        # 一般的な翻訳の問題を修正
+        result = result.replace("％", " %").replace("$ ", "$")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error during LLM translation: {e}", exc_info=True)
+        raise TranslationError(f"LLM translation failed: {e}") from e
 
 
 def translate_json_file(lang_file_path: str, page=None) -> bool:
     """
-    Translate a JSON language file and save the result as ja_jp.json.
+    Translate a JSON language file using OpenRouter LLM and save the result as ja_jp.json.
 
     Args:
         lang_file_path: Path to the en_us.json file
@@ -115,10 +140,20 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
     info_msg = None
 
     try:
-        # Initialize translator
-        translator = GoogleTranslator(source="auto", target="ja")
+        # OpenRouter API キーのチェック
+        if not config.OPENROUTER_API_KEY:
+            raise TranslationError(
+                "OpenRouter API key is not set. Please set OPENROUTER_API_KEY in .env file."
+            )
 
-        logger.info(f"Starting translation of {lang_file_path}")
+        # OpenRouter用のOpenAIクライアントを初期化
+        client = OpenAI(
+            base_url=config.OPENROUTER_BASE_URL, api_key=config.OPENROUTER_API_KEY
+        )
+
+        logger.info(
+            f"Starting LLM translation of {lang_file_path} using model: {config.OPENROUTER_MODEL}"
+        )
 
         # Read the source JSON file
         with open(lang_file_path, "r", encoding="utf-8") as f:
@@ -153,7 +188,7 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
         for key, value in en_json.items():
             if isinstance(value, str):
                 try:
-                    result = translate_text(translator, value)
+                    result = translate_text(client, value)
                     ja_json[key] = result
                     translated_strings += 1
 
@@ -183,7 +218,7 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
                 for sub_key, sub_value in value.items():
                     if isinstance(sub_value, str):
                         try:
-                            result = translate_text(translator, sub_value)
+                            result = translate_text(client, sub_value)
                             ja_dict[sub_key] = result
                             translated_strings += 1
                             pbar.update(1)
@@ -204,7 +239,7 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(ja_json, f, indent=4, ensure_ascii=False)
 
-        logger.info(f"Completed translation of {lang_file_path}")
+        logger.info(f"Completed LLM translation of {lang_file_path}")
 
         # Update progress info
         if page and info_msg:
