@@ -103,13 +103,14 @@ def retry_on_timeout(max_retries: int = 3, base_delay: int = 2) -> Callable:
     max_retries=config.MAX_TRANSLATION_RETRIES,
     base_delay=config.TRANSLATION_RETRY_BASE_DELAY,
 )
-def translate_text(client: OpenAI, text: str) -> str:
+def translate_text(client: OpenAI, text: str, model: str = "") -> str:
     """
-    Translate text using OpenRouter LLM with retry functionality.
+    Translate text using OpenRouter LLM with retry and fallback functionality.
 
     Args:
         client: The OpenAI client configured for OpenRouter
         text: The text to translate
+        model: Optional specific model to use (overrides config)
 
     Returns:
         The translated text
@@ -117,51 +118,77 @@ def translate_text(client: OpenAI, text: str) -> str:
     Raises:
         TranslationError: If the translation fails after retries
     """
-    try:
-        # LLMを使用した翻訳プロンプト
-        response = client.chat.completions.create(
-            model=config.OPENROUTER_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a professional translator specializing in video game localization. "
-                    "Translate the given English text to Japanese. "
-                    "Maintain game terminology, preserve special characters like %, $, and formatting. "
-                    "Return ONLY the translated text without any explanations or additional content.",
-                },
-                {"role": "user", "content": f"Translate to Japanese: {text}"},
-            ],
-            temperature=0.3,  # 低めの温度で一貫性のある翻訳を得る
-            max_tokens=500,
-        )
+    # Use provided model or fall back to configured model
+    current_model = model if model else config.OPENROUTER_MODEL
+    
+    # Try with primary model first, then fallbacks
+    models_to_try = [current_model] + config.FALLBACK_MODELS
+    last_error = None
+    
+    for attempt_model in models_to_try:
+        if not attempt_model:
+            continue
+            
+        try:
+            logger.info(f"Translating with model: {attempt_model}")
+            # LLMを使用した翻訳プロンプト
+            response = client.chat.completions.create(
+                model=attempt_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a professional translator specializing in video game localization. "
+                        "Translate the given English text to Japanese. "
+                        "Maintain game terminology, preserve special characters like %, $, and formatting. "
+                        "Return ONLY the translated text without any explanations or additional content.",
+                    },
+                    {"role": "user", "content": f"Translate to Japanese: {text}"},
+                ],
+                temperature=0.3,  # 低めの温度で一貫性のある翻訳を得る
+                max_tokens=500,
+            )
 
-        result = response.choices[0].message.content
+            result = response.choices[0].message.content
 
-        if result is None:
-            logger.warning(f"Translation returned None for text: {text}")
-            return text
+            if result is None:
+                logger.warning(f"Translation returned None for text: {text}")
+                return text
 
-        # 翻訳結果をクリーンアップ
-        result = result.strip()
+            # 翻訳結果をクリーンアップ
+            result = result.strip()
 
-        # 一般的な翻訳の問題を修正
-        result = result.replace("％", " %").replace("$ ", "$")
+            # 一般的な翻訳の問題を修正
+            result = result.replace("％", " %").replace("$ ", "$")
 
-        return result
+            return result
 
-    except Exception as e:
-        error_msg = str(e).lower()
-        # 認証エラーやモデルが見つからない場合は即座に失敗
-        if any(
-            keyword in error_msg
-            for keyword in ["authentication", "unauthorized", "invalid api key", "not found", "model"]
-        ):
-            logger.error(f"Non-retryable error during LLM translation: {e}")
-            raise TranslationError(f"LLM translation failed (non-retryable): {e}") from e
-        
-        # その他のエラーはリトライ可能として扱う
-        logger.error(f"Error during LLM translation: {e}", exc_info=True)
-        raise TranslationError(f"LLM translation failed: {e}") from e
+        except Exception as e:
+            error_msg = str(e).lower()
+            last_error = e
+            
+            # レート制限エラーの場合はフォールバックモデルを試す
+            if "429" in error_msg or "rate limit" in error_msg:
+                logger.warning(f"Rate limit hit with model {attempt_model}, trying fallback...")
+                continue
+            
+            # 認証エラーやモデルが見つからない場合は即座に失敗
+            if any(
+                keyword in error_msg
+                for keyword in ["authentication", "unauthorized", "invalid api key", "not found", "model"]
+            ):
+                logger.error(f"Non-retryable error during LLM translation: {e}")
+                raise TranslationError(f"LLM translation failed (non-retryable): {e}") from e
+            
+            # その他のエラーはリトライ可能として扱う
+            logger.error(f"Error during LLM translation with model {attempt_model}: {e}", exc_info=True)
+            raise TranslationError(f"LLM translation failed: {e}") from e
+    
+    # All models failed
+    if last_error:
+        logger.error(f"All models failed, last error: {last_error}")
+        raise TranslationError(f"Translation failed with all models: {last_error}") from last_error
+    else:
+        raise TranslationError("No models configured for translation")
 
 
 def translate_json_file(lang_file_path: str, page=None) -> bool:

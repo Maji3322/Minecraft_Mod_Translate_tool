@@ -24,7 +24,7 @@ def create_theme() -> ft.Theme:
 
 
 def create_app_bar(
-    page: ft.Page, on_help_click=None, on_github_click=None
+    page: ft.Page, on_help_click=None, on_github_click=None, on_settings_click=None
 ) -> ft.AppBar:
     """
     Create the application bar.
@@ -33,6 +33,7 @@ def create_app_bar(
         page: The page to add the app bar to
         on_help_click: Callback for help button click
         on_github_click: Callback for GitHub button click
+        on_settings_click: Callback for settings button click
 
     Returns:
         The application bar
@@ -56,6 +57,12 @@ def create_app_bar(
             ft.Container(
                 content=ft.Row(
                     controls=[
+                        ft.IconButton(
+                            ft.Icons.SETTINGS,
+                            icon_color=COLORS["primary"],
+                            tooltip="OpenRouter設定",
+                            on_click=on_settings_click,
+                        ),
                         ft.IconButton(
                             ft.Icons.HELP_OUTLINE,
                             icon_color=COLORS["primary"],
