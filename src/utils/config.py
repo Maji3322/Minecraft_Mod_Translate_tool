@@ -6,6 +6,11 @@ import os
 import tomllib
 from typing import Dict, Optional
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 
 class Config:
     """Configuration manager for the application."""
@@ -50,8 +55,16 @@ class Config:
     MAX_TRANSLATION_RETRIES = 5
     TRANSLATION_RETRY_BASE_DELAY = 3
 
+    # OpenRouter settings (class variables for defaults from env)
+    OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+    _env_api_key = os.getenv("OPENROUTER_API_KEY", "")
+
     def __init__(self):
         self._pack_format: Optional[int] = None
+        # Runtime OpenRouter settings (stored in memory only, not persisted)
+        self._openrouter_api_key: str = self._env_api_key
+        self._openrouter_model: str = ""
+        self._fallback_models: list[str] = []
 
     @property
     def pack_format(self) -> Optional[int]:
@@ -94,6 +107,36 @@ class Config:
         except Exception:
             # その他の予期しないエラー
             return "unknown"
+
+    @property
+    def OPENROUTER_API_KEY(self) -> str:
+        """Get the OpenRouter API key (in-memory only)."""
+        return self._openrouter_api_key
+
+    @OPENROUTER_API_KEY.setter
+    def OPENROUTER_API_KEY(self, value: str):
+        """Set the OpenRouter API key (in-memory only)."""
+        self._openrouter_api_key = value
+
+    @property
+    def OPENROUTER_MODEL(self) -> str:
+        """Get the OpenRouter model."""
+        return self._openrouter_model
+
+    @OPENROUTER_MODEL.setter
+    def OPENROUTER_MODEL(self, value: str):
+        """Set the OpenRouter model."""
+        self._openrouter_model = value
+
+    @property
+    def FALLBACK_MODELS(self) -> list[str]:
+        """Get the fallback models list."""
+        return self._fallback_models
+
+    @FALLBACK_MODELS.setter
+    def FALLBACK_MODELS(self, value: list[str]):
+        """Set the fallback models list."""
+        self._fallback_models = value
 
 
 # Create a global config instance
