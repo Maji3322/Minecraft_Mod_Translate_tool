@@ -20,3 +20,5 @@ tempCodeRunnerFile.py
 dist
 *.egg-info/
 build/
+test_translation.py
+list_free_models.py
