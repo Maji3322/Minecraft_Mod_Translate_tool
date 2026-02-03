@@ -1,9 +1,8 @@
-"""
-OpenRouter API integration for fetching available models and handling rate limits.
-"""
+"""OpenRouter API integration for fetching models and handling rate limits."""
 
 import logging
 from typing import Dict, List, Optional
+
 import requests
 
 logger = logging.getLogger(__name__)
@@ -15,23 +14,21 @@ class OpenRouterAPI:
     BASE_URL = "https://openrouter.ai/api/v1"
 
     def __init__(self, api_key: Optional[str] = None):
-        """
-        Initialize OpenRouter API client.
+        """Initialize OpenRouter API client.
 
         Args:
-            api_key: Optional API key for authenticated requests
+            api_key: Optional API key for authenticated requests.
         """
         self.api_key = api_key
 
     def fetch_models(self) -> List[Dict]:
-        """
-        Fetch available models from OpenRouter API.
+        """Fetch available models from OpenRouter API.
 
         Returns:
             List of model dictionaries with id, name, pricing, etc.
 
         Raises:
-            Exception: If API request fails
+            Exception: If API request fails.
         """
         try:
             headers = {}
@@ -53,18 +50,15 @@ class OpenRouterAPI:
             logger.error(f"Failed to fetch models from OpenRouter: {e}")
             raise Exception(f"モデルの取得に失敗しました: {str(e)}") from e
 
-    def search_models(
-        self, models: List[Dict], search_term: str
-    ) -> List[Dict]:
-        """
-        Search models by partial name match.
+    def search_models(self, models: List[Dict], search_term: str) -> List[Dict]:
+        """Search models by partial name match.
 
         Args:
-            models: List of model dictionaries
-            search_term: Search term for partial matching
+            models: List of model dictionaries.
+            search_term: Search term for partial matching.
 
         Returns:
-            List of matching models
+            List of matching models.
         """
         if not search_term:
             return models
@@ -82,14 +76,13 @@ class OpenRouterAPI:
         return matching_models
 
     def format_model_info(self, model: Dict) -> str:
-        """
-        Format model information for display.
+        """Format model information for display.
 
         Args:
-            model: Model dictionary
+            model: Model dictionary.
 
         Returns:
-            Formatted string with model info
+            Formatted string with model info.
         """
         model_id = model.get("id", "Unknown")
         model_name = model.get("name", "Unknown")
@@ -97,7 +90,6 @@ class OpenRouterAPI:
         prompt_price = pricing.get("prompt", "0")
         completion_price = pricing.get("completion", "0")
 
-        # Check if free
         is_free = str(prompt_price) == "0" and str(completion_price) == "0"
         free_tag = " [無料]" if is_free else ""
 
@@ -105,14 +97,13 @@ class OpenRouterAPI:
 
     @staticmethod
     def is_rate_limit_error(error: Exception) -> bool:
-        """
-        Check if an error is a rate limit error.
+        """Check if an error is a rate limit error.
 
         Args:
-            error: Exception to check
+            error: Exception to check.
 
         Returns:
-            True if error is rate limit related
+            True if error is rate limit related.
         """
         error_str = str(error).lower()
         return (
