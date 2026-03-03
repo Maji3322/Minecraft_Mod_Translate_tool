@@ -1,3 +1,7 @@
+# 注意: このリポジトリは近日、大幅な変更を予定しており、リポジトリ全体として整っていません。リリースにある実行ファイルやこのリポジトリのコードベースの扱いは慎重に行ってください。
+# CAUTION: This repository is undergoing significant changes in the near future, and the overall repository is not yet organized. Please exercise caution when handling the executable files in the releases or the codebase of this repository.
+
+
 # **MineCraft-Mod-Translate-Tool**
 
 <p align="center">
