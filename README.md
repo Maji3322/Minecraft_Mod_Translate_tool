@@ -1,5 +1,5 @@
-# 注意: このリポジトリは近日、大幅な変更を予定しており、リポジトリ全体として整っていません。リリースにある実行ファイルやこのリポジトリのコードベースの扱いは慎重に行ってください。(スターをつけてくれた方には大変申し訳ありません!)
-# CAUTION: This repository is undergoing significant changes in the near future, and the overall repository is not yet organized. Please exercise caution when handling the executable files in the releases or the codebase of this repository.(Apologies to those who gave a star for this repository!)
+# 注意: このリポジトリは一時、安全のため非公開にされていました。近日、大幅な変更を予定しており、全体として整っていません。リリースにある実行ファイルやこのリポジトリのコードベースの扱いは慎重に行ってください。(非公開にする前につけてくださったスターは外れてしまっています。大変申し訳ありません!)
+# CAUTION: This repository was temporarily made private for security reasons.　This is undergoing significant changes in the near future, and the overall repository is not yet organized. Please exercise caution when handling the executable files in the releases or the codebase of this repository.(Any stars you gave before making this private have now been removed. I apologize!)
 
 
 # **MineCraft-Mod-Translate-Tool**
