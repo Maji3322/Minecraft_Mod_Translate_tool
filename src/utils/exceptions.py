@@ -31,3 +31,16 @@ class UIError(MCMTException):
     """Exception raised for errors in UI operations."""
 
     pass
+
+
+class DependencyError(MCMTException):
+    """Raised when an external dependency is missing or unusable.
+
+    The Flet runtime requires certain system libraries (for example the
+    ``libmpv`` shared object on Linux).  If one of these cannot be
+    located we convert the low-level ``OSError`` into this more specific
+    exception so that the caller can present a helpful message and
+    terminate cleanly instead of dumping a stack trace.
+    """
+
+    pass

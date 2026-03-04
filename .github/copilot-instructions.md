@@ -7,7 +7,6 @@
     -   1 行の文字数を適切に制限する
     -   また、コードの意図を理解しやすくするために、コードの構造を明確にする
 -   Flet を GUI に使う。
--   googletrans から deep-translator に移行する
 
 ```markdown
 You can:

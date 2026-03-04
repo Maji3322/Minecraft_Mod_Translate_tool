@@ -18,6 +18,9 @@ AGENTS.md
 Please make appropriate and active use of any existing items in the list below.
 If a skill does not exist and is deemed necessary, please read the instructions for the "Skill Creator" tool (https://raw.githubusercontent.com/anthropics/skills/refs/heads/main/skills/skill-creator/SKILL.md) and create it.
 
+### Available Project Skills
+- openrouter-translation-maintenance: Maintain the OpenRouter translation pipeline, settings UI flow, fallback model behavior, and migration-safe documentation updates. (file: /home/kazuya/Desktop/mcmt/skills/openrouter-translation-maintenance/SKILL.md)
+
 - Key Modules
 - Prerequisites
 - Coding Conventions
