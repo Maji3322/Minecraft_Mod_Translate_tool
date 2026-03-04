@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenRouter Translation Ops"
+  short_description: "Run and maintain OpenRouter translation workflows"
+  default_prompt: "Use $openrouter-translation-maintenance to configure models, fallback strategy, and migration-safe translation changes."

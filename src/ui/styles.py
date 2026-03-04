@@ -3,12 +3,27 @@ UI styles and themes for the application.
 """
 
 import flet as ft
+from platform import system
 
 from ..utils.config import config
 
 # Color palette
 COLORS = config.COLORS
 
+def get_system_font() -> str:
+    """
+    Get the system font based on the operating system.
+
+    Returns:
+        The system font name
+    """
+    os_name = system()
+    if os_name == "Windows":
+        return "Noto Sans JP"
+    elif os_name == "Darwin":  # macOS
+        return "Hiragino Sans"
+    else:  # Linux and others
+        return "Noto Sans CJK JP"
 
 def create_theme() -> ft.Theme:
     """
@@ -19,7 +34,7 @@ def create_theme() -> ft.Theme:
     """
     return ft.Theme(
         color_scheme_seed=COLORS["primary"],
-        font_family="Noto Sans JP",
+        font_family=get_system_font(),
     )
 
 

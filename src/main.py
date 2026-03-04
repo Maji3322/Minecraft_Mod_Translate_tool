@@ -29,6 +29,17 @@ def main():
 
     # Start the Flet application
     try:
+        # verify that any external system requirements are satisfied
+        from .utils.system import check_system_requirements
+
+        # if a dependency is missing, the function will log an error and
+        # raise an exception; handle it explicitly so we can exit cleanly
+        try:
+            check_system_requirements(logger)
+        except Exception:  # pylint: disable=broad-except
+            # the logger call above already recorded what went wrong
+            sys.exit(1)
+
         ft.app(
             target=start_app,
             view=AppView.FLET_APP,
