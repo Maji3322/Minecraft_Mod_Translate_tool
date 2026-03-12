@@ -1,6 +1,4 @@
-"""
-File management operations for the application.
-"""
+"""File management operations for the application."""
 
 import glob
 import logging
@@ -16,22 +14,21 @@ logger = logging.getLogger(__name__)
 
 
 def init_directory(path: str) -> None:
-    """
-    Initialize a directory by removing it if it exists and creating a new empty one.
-    
+    """Initialize a directory by removing it if exists and creating new one.
+
     Args:
-        path: The path to the directory to initialize
-        
+        path: The path to the directory to initialize.
+
     Raises:
-        FileOperationError: If the directory cannot be initialized
+        FileOperationError: If the directory cannot be initialized.
     """
     logger.info(f"Initializing directory: {path}")
-    
+
     try:
         if os.path.exists(path):
             logger.debug(f"{path} exists. Removing it.")
             shutil.rmtree(path)
-        
+
         os.makedirs(path)
         logger.debug(f"Created {path}")
     except OSError as e:
@@ -41,42 +38,37 @@ def init_directory(path: str) -> None:
 
 
 def recursive_unzip_jar(jar_path: str) -> Optional[str]:
-    """
-    Recursively unzip a JAR file, including any nested JAR files in META-INF/jars.
-    
+    """Recursively unzip a JAR file, including nested JARs in META-INF/jars.
+
     Args:
-        jar_path: The path to the JAR file to unzip
-        
+        jar_path: The path to the JAR file to unzip.
+
     Returns:
-        The path to the directory containing the unzipped files, or None if the file doesn't exist
-        
+        The path to directory containing unzipped files, or None if doesn't exist.
+
     Raises:
-        FileOperationError: If the JAR file cannot be unzipped
+        FileOperationError: If the JAR file cannot be unzipped.
     """
     if not os.path.exists(jar_path):
         logger.error(f"{jar_path} not found. Skipping.")
         return None
-    
+
     logger.info(f"Unzipping {jar_path}")
-    
-    # Create temp directory if it doesn't exist
+
     if not os.path.exists(config.TEMP_DIR):
         os.makedirs(config.TEMP_DIR)
-    
-    # Create extraction directory
+
     base_name = os.path.splitext(os.path.basename(jar_path))[0]
     jar_folder = os.path.join(os.getcwd(), config.TEMP_DIR, base_name)
     os.makedirs(jar_folder, exist_ok=True)
-    
-    # Copy JAR file as ZIP
+
     _, ext = os.path.splitext(jar_path)
     if ext.lower() == ".jar":
         zip_path = jar_folder + ".zip"
         shutil.copy2(jar_path, zip_path)
     else:
         zip_path = jar_path
-    
-    # Extract ZIP file
+
     try:
         with zipfile.ZipFile(zip_path, "r") as zip_file:
             logger.debug(f"Extracting {zip_path}")
@@ -84,61 +76,68 @@ def recursive_unzip_jar(jar_path: str) -> Optional[str]:
     except (zipfile.BadZipFile, FileNotFoundError) as e:
         logger.error(f"Extraction error: {zip_path} - {str(e)}")
         return jar_folder
-    
-    # Remove temporary ZIP file
+
     if ext.lower() == ".jar" and os.path.exists(zip_path):
         os.remove(zip_path)
-    
-    # Process nested JAR files in META-INF/jars
-    meta_jars_path = os.path.join(jar_folder, "META-INF", "jars")
-    if os.path.exists(meta_jars_path):
-        for root, _, files in os.walk(meta_jars_path):
-            for file in files:
-                if file.endswith(".jar"):
-                    inner_jar_path = os.path.join(root, file)
-                    try:
-                        # Create extraction directory for inner JAR
-                        inner_base_name = os.path.splitext(file)[0][:30]  # Limit name length
-                        inner_jar_folder = os.path.join(jar_folder, f"__{inner_base_name}")
-                        os.makedirs(inner_jar_folder, exist_ok=True)
-                        
-                        # Extract inner JAR
-                        with zipfile.ZipFile(inner_jar_path, "r") as inner_zip:
-                            logger.debug(f"Extracting inner JAR: {inner_jar_path}")
-                            inner_zip.extractall(inner_jar_folder)
-                    except (zipfile.BadZipFile, FileNotFoundError, OSError) as e:
-                        logger.error(f"Inner JAR extraction error: {inner_jar_path} - {str(e)}")
-                        continue
-    
+
+    _extract_nested_jars(jar_folder)
+
     return jar_folder
 
 
-def clean_directory(root_dir: str, files_to_keep: List[str]) -> None:
-    """
-    Clean a directory by removing all files and directories except those in files_to_keep.
-    
+def _extract_nested_jars(jar_folder: str) -> None:
+    """Extract nested JAR files from META-INF/jars directory.
+
     Args:
-        root_dir: The root directory to clean
-        files_to_keep: A list of file paths to keep
-        
+        jar_folder: The folder containing the extracted JAR files.
+    """
+    meta_jars_path = os.path.join(jar_folder, "META-INF", "jars")
+    if not os.path.exists(meta_jars_path):
+        return
+
+    for root, _, files in os.walk(meta_jars_path):
+        for file in files:
+            if file.endswith(".jar"):
+                inner_jar_path = os.path.join(root, file)
+                try:
+                    inner_base_name = os.path.splitext(file)[0][:30]
+                    inner_jar_folder = os.path.join(jar_folder, f"__{inner_base_name}")
+                    os.makedirs(inner_jar_folder, exist_ok=True)
+
+                    with zipfile.ZipFile(inner_jar_path, "r") as inner_zip:
+                        logger.debug(f"Extracting inner JAR: {inner_jar_path}")
+                        inner_zip.extractall(inner_jar_folder)
+                except (zipfile.BadZipFile, FileNotFoundError, OSError) as e:
+                    logger.error(f"Inner JAR extraction error: {inner_jar_path} - {str(e)}")
+                    continue
+
+
+def clean_directory(root_dir: str, files_to_keep: List[str]) -> None:
+    """Clean a directory by removing all files except those in files_to_keep.
+
+    Args:
+        root_dir: The root directory to clean.
+        files_to_keep: A list of file paths to keep.
+
     Raises:
-        FileOperationError: If the directory cannot be cleaned
+        FileOperationError: If the directory cannot be cleaned.
     """
     try:
-        # Walk the directory tree bottom-up
         for dirpath, dirnames, filenames in os.walk(root_dir, topdown=False):
-            # Remove files not in files_to_keep
             for filename in filenames:
                 file_path = os.path.join(dirpath, filename)
                 if file_path not in files_to_keep:
                     os.remove(file_path)
-            
-            # Remove empty directories or directories not containing files_to_keep
+
             for dirname in dirnames:
                 dir_path = os.path.join(dirpath, dirname)
-                if not any(os.path.commonpath([file_path, dir_path]) == dir_path for file_path in files_to_keep):
+                should_keep = any(
+                    os.path.commonpath([file_path, dir_path]) == dir_path
+                    for file_path in files_to_keep
+                )
+                if not should_keep:
                     shutil.rmtree(dir_path)
-        
+
         logger.info(f"Cleaned directory: {root_dir}")
     except (OSError, shutil.Error) as e:
         error_msg = f"Failed to clean directory {root_dir}: {str(e)}"
@@ -147,41 +146,29 @@ def clean_directory(root_dir: str, files_to_keep: List[str]) -> None:
 
 
 def copy_assets_folders(root_dir: str, json_file_paths: List[str]) -> None:
-    """
-    Copy assets folders from the source directories to the output directory.
-    
+    """Copy assets folders from source directories to output directory.
+
     Args:
-        root_dir: The root directory containing the assets folders
-        json_file_paths: A list of JSON file paths
-        
+        root_dir: The root directory containing the assets folders.
+        json_file_paths: A list of JSON file paths.
+
     Raises:
-        FileOperationError: If the assets folders cannot be copied
+        FileOperationError: If the assets folders cannot be copied.
     """
     try:
         translate_rp_dir = os.path.join(os.path.dirname(root_dir), config.OUTPUT_DIR)
         assets_dir = os.path.join(translate_rp_dir, "assets")
         os.makedirs(assets_dir, exist_ok=True)
-        
+
         for json_file_path in json_file_paths:
-            # Get the assets folder path from the JSON file path
             src_assets_dir = os.path.dirname(os.path.dirname(json_file_path))
-            
-            # Create the destination directory name
             dest_dirname = os.path.basename(src_assets_dir)
             dest_dir = os.path.join(assets_dir, dest_dirname)
-            
-            # Merge existing folders or create new ones
+
             if os.path.exists(dest_dir):
-                # Merge folders
-                for root, _, files in os.walk(src_assets_dir):
-                    for file in files:
-                        src_file = os.path.join(root, file)
-                        dst_file = os.path.join(dest_dir, os.path.relpath(src_file, src_assets_dir))
-                        os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-                        shutil.copy2(src_file, dst_file)
+                _merge_folders(src_assets_dir, dest_dir)
                 logger.info(f"Merged assets folder: {dest_dir}")
             else:
-                # Create new folder
                 shutil.copytree(src_assets_dir, dest_dir)
                 logger.info(f"Copied assets folder: {dest_dir}")
     except (OSError, shutil.Error) as e:
@@ -190,40 +177,54 @@ def copy_assets_folders(root_dir: str, json_file_paths: List[str]) -> None:
         raise FileOperationError(error_msg) from e
 
 
-def search_language_files() -> Tuple[List[str], List[str]]:
+def _merge_folders(src_dir: str, dest_dir: str) -> None:
+    """Merge source folder into destination folder.
+
+    Args:
+        src_dir: Source directory path.
+        dest_dir: Destination directory path.
     """
-    Search for language files in the output directory.
-    
+    for root, _, files in os.walk(src_dir):
+        for file in files:
+            src_file = os.path.join(root, file)
+            dst_file = os.path.join(dest_dir, os.path.relpath(src_file, src_dir))
+            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+            shutil.copy2(src_file, dst_file)
+
+
+def search_language_files() -> Tuple[List[str], List[str]]:
+    """Search for language files in the output directory.
+
     Returns:
         A tuple containing:
-        - A list of en_us.json file paths
-        - A list of en_us.json file paths that need translation (no corresponding ja_jp.json)
-        
+        - A list of en_us.json file paths.
+        - A list of en_us.json files needing translation (no ja_jp.json).
+
     Raises:
-        FileOperationError: If the language files cannot be searched
+        FileOperationError: If the language files cannot be searched.
     """
     try:
-        # Search for all en_us.json files
-        en_us_json_paths = glob.glob(os.path.join(config.OUTPUT_DIR, "**", "en_us.json"), recursive=True)
-        
+        en_us_json_paths = glob.glob(
+            os.path.join(config.OUTPUT_DIR, "**", "en_us.json"), recursive=True
+        )
+
         if not en_us_json_paths:
             logger.info("No en_us.json files found.")
             return [], []
-        
-        # Find files that need translation (no corresponding ja_jp.json)
+
         need_translation_paths = []
-        
+
         for en_us_path in en_us_json_paths:
-            # Get the corresponding ja_jp.json path
             ja_jp_json_path = os.path.join(os.path.dirname(en_us_path), "ja_jp.json")
-            
-            # Add to translation list if ja_jp.json doesn't exist
+
             if not os.path.exists(ja_jp_json_path):
-                logger.info(f"No ja_jp.json found for {en_us_path}. Adding to translation list.")
+                logger.info(
+                    f"No ja_jp.json found for {en_us_path}. Adding to translation list."
+                )
                 need_translation_paths.append(en_us_path)
             else:
                 logger.info(f"ja_jp.json exists for {en_us_path}. Skipping.")
-        
+
         return en_us_json_paths, need_translation_paths
     except Exception as e:
         error_msg = f"Failed to search language files: {str(e)}"
