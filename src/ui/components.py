@@ -1,6 +1,4 @@
-"""
-Reusable UI components for the application.
-"""
+"""Reusable UI components for the application."""
 
 import logging
 import os
@@ -19,15 +17,33 @@ logger = logging.getLogger(__name__)
 # Keys for storing UI components in page data
 PROGRESS_CONTAINER_KEY = "progress_container"
 LOADING_CONTAINER_KEY = "loading_container"
-EXTRACTION_CARD_TEXT = "MODファイルの解凍"  # 定数を定義
+
+# UI text constants
+TEXT_EXTRACTION_CARD = "MODファイルの解凍"
+TEXT_TRANSLATING = "翻訳中..."
+TEXT_PROCESSING = "処理中..."
+TEXT_CLOSE = "閉じる"
+TEXT_CANCEL = "キャンセル"
+TEXT_OPEN = "開く"
+TEXT_GITHUB_CONFIRM = "GitHubのリンクを開きますか？"
+TEXT_GITHUB_TITLE = "GitHub"
+
+# GitHub repository URL
+GITHUB_REPO_URL = "https://github.com/Maji3429/new-mc-mod-translating-tool"
+
+# UI sizing constants
+DEFAULT_WINDOW_HEIGHT = 500
+WINDOW_HEIGHT_OFFSET = 150
+PROGRESS_BAR_WIDTH = 300
+LOADING_RING_SIZE = 50
+LOADING_RING_STROKE = 4
 
 
 def initialize_page_data(page: ft.Page) -> None:
-    """
-    Ensure that the page has a data attribute initialized as a dictionary.
+    """Ensure that the page has a data attribute initialized as a dictionary.
 
     Args:
-        page: The page to initialize data for
+        page: The page to initialize data for.
     """
     if not hasattr(page, "data") or page.data is None:
         page.data = {}
@@ -41,16 +57,15 @@ def show_dialog(
     on_dismiss: Optional[Callable] = None,
     modal: bool = True,
 ) -> None:
-    """
-    Show a dialog with the given title and content.
+    """Show a dialog with the given title and content.
 
     Args:
-        page: The page to show the dialog on
-        title: Dialog title
-        content: Dialog content
-        actions: Dialog actions
-        on_dismiss: Callback when dialog is dismissed
-        modal: Whether the dialog is modal
+        page: The page to show the dialog on.
+        title: Dialog title.
+        content: Dialog content.
+        actions: Dialog actions.
+        on_dismiss: Callback when dialog is dismissed.
+        modal: Whether the dialog is modal.
     """
 
     def close_dialog(e):
@@ -59,11 +74,9 @@ def show_dialog(
         if on_dismiss:
             on_dismiss()
 
-    # Default close button if no actions provided
     if actions is None:
-        actions = [ft.TextButton("閉じる", on_click=close_dialog)]
+        actions = [ft.TextButton(TEXT_CLOSE, on_click=close_dialog)]
 
-    # Create dialog
     dialog = ft.AlertDialog(
         title=ft.Text(title),
         content=ft.Text(content) if isinstance(content, str) else content,
@@ -72,35 +85,31 @@ def show_dialog(
         modal=modal,
     )
 
-    # Show dialog
-    # Assign dialog to page (Page stub may not define this attribute)
     page.dialog = dialog  # type: ignore[attr-defined]
     dialog.open = True  # type: ignore[attr-defined]
     page.update()
 
 
 def show_error_dialog(page: ft.Page, title: str, message: str) -> None:
-    """
-    Show an error dialog.
+    """Show an error dialog.
 
     Args:
-        page: The page to show the dialog on
-        title: Dialog title
-        message: Error message
+        page: The page to show the dialog on.
+        title: Dialog title.
+        message: Error message.
     """
     show_dialog(page, title, message)
 
 
 def show_github_dialog(page: ft.Page) -> None:
-    """
-    Show a dialog to confirm opening GitHub.
+    """Show a dialog to confirm opening GitHub.
 
     Args:
-        page: The page to show the dialog on
+        page: The page to show the dialog on.
     """
 
     def open_github(e):
-        webbrowser.open("https://github.com/Maji3429/new-mc-mod-translating-tool")
+        webbrowser.open(GITHUB_REPO_URL)
         close_dialog(e)
 
     def close_dialog(e):
@@ -109,15 +118,15 @@ def show_github_dialog(page: ft.Page) -> None:
 
     dialog = ft.AlertDialog(
         modal=True,
-        title=ft.Text("GitHub", size=20),
+        title=ft.Text(TEXT_GITHUB_TITLE, size=20),
         content=ft.Container(
-            content=ft.Text("GitHubのリンクを開きますか？"),
+            content=ft.Text(TEXT_GITHUB_CONFIRM),
             padding=20,
         ),
         actions=[
-            ft.TextButton("キャンセル", on_click=close_dialog),
+            ft.TextButton(TEXT_CANCEL, on_click=close_dialog),
             ft.TextButton(
-                "開く",
+                TEXT_OPEN,
                 on_click=open_github,
                 style=ft.ButtonStyle(color=config.COLORS["primary"]),
             ),
@@ -130,26 +139,25 @@ def show_github_dialog(page: ft.Page) -> None:
 
 
 def make_loading_indicator(page: ft.Page) -> ft.Container:
-    """
-    Create a loading indicator.
+    """Create a loading indicator.
 
     Args:
-        page: The page to add the loading indicator to
+        page: The page to add the loading indicator to.
 
     Returns:
-        The loading indicator container
+        The loading indicator container.
     """
     loading_container = ft.Container(
         content=ft.Column(
             controls=[
                 ft.ProgressRing(
-                    width=50,
-                    height=50,
-                    stroke_width=4,
+                    width=LOADING_RING_SIZE,
+                    height=LOADING_RING_SIZE,
+                    stroke_width=LOADING_RING_STROKE,
                     color=config.COLORS["primary"],
                 ),
                 ft.Text(
-                    "処理中...",
+                    TEXT_PROCESSING,
                     color=config.COLORS["text"],
                     size=16,
                     weight=ft.FontWeight.BOLD,
@@ -163,13 +171,7 @@ def make_loading_indicator(page: ft.Page) -> ft.Container:
         visible=False,
     )
 
-    # Store the loading container in page data
     initialize_page_data(page)
-
-    # 確実に page.data が None でないことを再確認
-    if not hasattr(page, "data") or page.data is None:
-        page.data = {}
-
     page.data[LOADING_CONTAINER_KEY] = loading_container
     page.add(loading_container)
 
@@ -177,14 +179,12 @@ def make_loading_indicator(page: ft.Page) -> ft.Container:
 
 
 def show_loading(page: ft.Page) -> None:
-    """
-    Show the loading indicator.
+    """Show the loading indicator.
 
     Args:
-        page: The page containing the loading indicator
+        page: The page containing the loading indicator.
     """
-    if not hasattr(page, "data") or page.data is None:
-        page.data = {}
+    initialize_page_data(page)
 
     loading_container = page.data.get(LOADING_CONTAINER_KEY)
 
@@ -196,14 +196,12 @@ def show_loading(page: ft.Page) -> None:
 
 
 def hide_loading(page: ft.Page) -> None:
-    """
-    Hide the loading indicator.
+    """Hide the loading indicator.
 
     Args:
-        page: The page containing the loading indicator
+        page: The page containing the loading indicator.
     """
-    if not hasattr(page, "data") or page.data is None:
-        page.data = {}
+    initialize_page_data(page)
 
     loading_container = page.data.get(LOADING_CONTAINER_KEY)
 
@@ -215,42 +213,36 @@ def hide_loading(page: ft.Page) -> None:
 
 
 def make_progress_bar(page: ft.Page, file_path: str) -> Tuple[ft.ProgressBar, ft.Text]:
-    """
-    Create a progress bar for translation.
+    """Create a progress bar for translation.
 
     Args:
-        page: The page to add the progress bar to
-        file_path: The path of the file being translated
+        page: The page to add the progress bar to.
+        file_path: The path of the file being translated.
 
     Returns:
-        A tuple containing the progress bar and info text
+        A tuple containing the progress bar and info text.
     """
-    # Hide loading indicator if visible
     hide_loading(page)
 
-    # Get the MOD name from the file path
     file_name = os.path.basename(os.path.dirname(os.path.dirname(file_path)))
 
-    # Create progress bar and info text
     progress_bar = ft.ProgressBar(
-        width=300,
+        width=PROGRESS_BAR_WIDTH,
         color=config.COLORS["primary"],
         bgcolor=config.COLORS["card"],
     )
 
     info_text = ft.Text(
-        "翻訳中...",
+        TEXT_TRANSLATING,
         color=config.COLORS["text"],
         size=14,
     )
 
-    # Create a card with the progress bar
     progress_card = ft.Card(
         content=ft.Container(
             padding=20,
             content=ft.Row(
                 controls=[
-                    # Left column (MOD name)
                     ft.Container(
                         content=ft.Text(
                             f"{file_name}",
@@ -261,12 +253,10 @@ def make_progress_bar(page: ft.Page, file_path: str) -> Tuple[ft.ProgressBar, ft
                         alignment=ft.alignment.center,
                         expand=True,
                     ),
-                    # Divider
                     ft.VerticalDivider(
                         width=1,
                         color=config.COLORS["divider"],
                     ),
-                    # Right column (progress)
                     ft.Container(
                         content=ft.Column(
                             controls=[
@@ -287,14 +277,17 @@ def make_progress_bar(page: ft.Page, file_path: str) -> Tuple[ft.ProgressBar, ft
         color=config.COLORS["card"],
     )
 
-    # Create or get the progress container
-    if not hasattr(page, "data") or page.data is None:
-        page.data = {}
+    initialize_page_data(page)
 
     progress_container = page.data.get(PROGRESS_CONTAINER_KEY)
 
     if not progress_container:
-        # Create a new container for progress cards
+        window_height = (
+            page.window.height - WINDOW_HEIGHT_OFFSET
+            if page.window and page.window.height
+            else DEFAULT_WINDOW_HEIGHT
+        )
+
         progress_container = ft.Container(
             content=ft.Column(
                 controls=[progress_card],
@@ -302,24 +295,17 @@ def make_progress_bar(page: ft.Page, file_path: str) -> Tuple[ft.ProgressBar, ft
                 scroll=ft.ScrollMode.AUTO,
             ),
             padding=20,
-            height=(
-                page.window.height - 150 if page.window and page.window.height else 500
-            ),
+            height=window_height,
             visible=True,
         )
 
-        # Store the container in page data
         page.data[PROGRESS_CONTAINER_KEY] = progress_container
         page.add(progress_container)
     else:
-        # Add the progress card to the existing container
         if isinstance(progress_container, ft.Container) and isinstance(
             progress_container.content, ft.Column
         ):
-            # Remove the extraction card if it exists
             _remove_extraction_card(progress_container)
-
-            # Add the new progress card
             progress_container.content.controls.append(progress_card)
             progress_container.visible = True
             page.update()
@@ -538,18 +524,15 @@ def _remove_extraction_card(progress_container: ft.Container) -> bool:
     ):
         return False
 
-    # Find and remove the extraction card
     for i, control in enumerate(progress_container.content.controls):
         if isinstance(control, ft.Card) and isinstance(control.content, ft.Container):
             container_content = control.content.content
             if isinstance(container_content, ft.Column):
-                # Check if this is the extraction card by looking for EXTRACTION_CARD_TEXT
                 for sub_control in container_content.controls:
                     if (
                         isinstance(sub_control, ft.Text)
-                        and sub_control.value == EXTRACTION_CARD_TEXT
+                        and sub_control.value == TEXT_EXTRACTION_CARD
                     ):
-                        # Remove this card
                         progress_container.content.controls.pop(i)
                         return True
 

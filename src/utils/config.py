@@ -1,6 +1,4 @@
-"""
-Configuration management for the application.
-"""
+"""Configuration management for the application."""
 
 import os
 import tomllib
@@ -8,7 +6,6 @@ from typing import Dict, Optional
 
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 
@@ -60,21 +57,24 @@ class Config:
     _env_api_key = os.getenv("OPENROUTER_API_KEY", "")
 
     def __init__(self):
+        """Initialize configuration with default values."""
         self._pack_format: Optional[int] = None
-        # Runtime OpenRouter settings (stored in memory only, not persisted)
         self._openrouter_api_key: str = self._env_api_key
         self._openrouter_model: str = ""
         self._fallback_models: list[str] = []
 
     @property
     def pack_format(self) -> Optional[int]:
-        """Get the current pack format."""
+        """Get the current pack format.
+
+        Returns:
+            The current pack format or None if not set.
+        """
         return self._pack_format
 
     @pack_format.setter
     def pack_format(self, value: Optional[int]):
-        """
-        Set the pack format.
+        """Set the pack format.
 
         Args:
             value: The pack format to set, or None to unset it.
@@ -82,62 +82,89 @@ class Config:
         self._pack_format = value
 
     def get_pack_format_for_version(self, version: str) -> Optional[int]:
-        """Get the pack format for a Minecraft version."""
+        """Get the pack format for a Minecraft version.
+
+        Args:
+            version: The Minecraft version string.
+
+        Returns:
+            The pack format or None if version not found.
+        """
         return self.VERSION_TO_PACK_FORMAT.get(version)
 
     def get_app_version(self) -> str:
-        """
-        Get the application version from pyproject.toml.
-        
+        """Get the application version from pyproject.toml.
+
         Returns:
             The version string from pyproject.toml, or "unknown" if not found.
         """
         try:
-            # Get the project root directory (parent of src)
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_root = os.path.dirname(os.path.dirname(current_dir))
             pyproject_path = os.path.join(project_root, "pyproject.toml")
-            
+
             with open(pyproject_path, "rb") as f:
                 data = tomllib.load(f)
                 return data.get("project", {}).get("version", "unknown")
         except (FileNotFoundError, tomllib.TOMLDecodeError):
-            # ファイルが見つからない、またはパースエラーの場合
             return "unknown"
         except Exception:
-            # その他の予期しないエラー
             return "unknown"
 
     @property
     def OPENROUTER_API_KEY(self) -> str:
-        """Get the OpenRouter API key (in-memory only)."""
+        """Get the OpenRouter API key (in-memory only).
+
+        Returns:
+            The configured API key.
+        """
         return self._openrouter_api_key
 
     @OPENROUTER_API_KEY.setter
     def OPENROUTER_API_KEY(self, value: str):
-        """Set the OpenRouter API key (in-memory only)."""
+        """Set the OpenRouter API key (in-memory only).
+
+        Args:
+            value: The API key to set.
+        """
         self._openrouter_api_key = value
 
     @property
     def OPENROUTER_MODEL(self) -> str:
-        """Get the OpenRouter model."""
+        """Get the OpenRouter model.
+
+        Returns:
+            The configured model name.
+        """
         return self._openrouter_model
 
     @OPENROUTER_MODEL.setter
     def OPENROUTER_MODEL(self, value: str):
-        """Set the OpenRouter model."""
+        """Set the OpenRouter model.
+
+        Args:
+            value: The model name to set.
+        """
         self._openrouter_model = value
 
     @property
     def FALLBACK_MODELS(self) -> list[str]:
-        """Get the fallback models list."""
+        """Get the fallback models list.
+
+        Returns:
+            List of fallback model names.
+        """
         return self._fallback_models
 
     @FALLBACK_MODELS.setter
     def FALLBACK_MODELS(self, value: list[str]):
-        """Set the fallback models list."""
+        """Set the fallback models list.
+
+        Args:
+            value: List of model names to use as fallbacks.
+        """
         self._fallback_models = value
 
 
-# Create a global config instance
+# Global config instance
 config = Config()
