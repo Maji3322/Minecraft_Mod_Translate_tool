@@ -1,9 +1,16 @@
-# AGENTS.md - AI Coding Agent Guide for [this REPO]
+# AGENTS.md - AI Coding Agent Guide for Minecraft Mod Translate Tool
 
-This document provides comprehensive guidance for AI coding agents working on the [THIS] project.
+This document provides comprehensive guidance for AI coding agents working on the Minecraft Mod Translate Tool project.
 
 ## Project Overview
-pass
+
+**Minecraft Mod Translate Tool** is a Python desktop application that translates Minecraft Java Edition MOD language files using OpenRouter LLM API. It creates resource packs with Japanese translations of MOD items and text.
+
+**Tech Stack:**
+- **Language**: Python 3.11+
+- **GUI Framework**: Flet (cross-platform UI)
+- **Translation**: OpenRouter API (346+ LLM models)
+- **Build**: Nuitka (compilation to executable)
 
 ### Directory Structure
 
@@ -17,9 +24,6 @@ AGENTS.md
 ## Agent Skills
 Please make appropriate and active use of any existing items in the list below.
 If a skill does not exist and is deemed necessary, please read the instructions for the "Skill Creator" tool (https://raw.githubusercontent.com/anthropics/skills/refs/heads/main/skills/skill-creator/SKILL.md) and create it.
-
-### Available Project Skills
-- openrouter-translation-maintenance: Maintain the OpenRouter translation pipeline, settings UI flow, fallback model behavior, and migration-safe documentation updates. (file: /home/kazuya/Desktop/mcmt/skills/openrouter-translation-maintenance/SKILL.md)
 
 - Key Modules
 - Prerequisites
@@ -44,28 +48,22 @@ Use provided MCP servers actively. It provides really useful features. Do not fo
 3. Understand the affected components and their dependencies
 
 ### Making Changes
-1. Keep changes minimal and focused
-2. Follow existing code patterns and conventions
-3. Update documentation if changing public APIs
-4. Add tests for new functionality
-5. Run linter and tests before committing
+1. Follow Google-style docstrings
+2. Extract magic values to constants
+3. Decompose functions >80 lines
+4. Use existing exception classes
+5. Manual test before committing
 
-### Code Review
-- Provide context for changes in PR description
-- Respond to feedback constructively
-- Update based on review comments
-- Ensure CI passes before merging
+### Pull Requests
+- Describe changes clearly
+- Reference related issues
+- Include manual test results
+- Ensure syntax validation passes
 
-## Additional Resources
-
-## Getting Help
-
-For questions or issues:
-1. Check existing documentation (README.md)
-2. Search for similar issues in the memory you have
-3. Review the codebase for examples
-4. Consult the technology documentation linked above or context7 mcp(if it exist)
+## MCP Servers
+Use provided MCP servers actively for enhanced development capabilities.
 
 ---
 
-This document is maintained for AI coding agents. Keep it updated as the project evolves.
+Last Updated: 2025-02 (Post-Refactoring)
+Maintained for AI coding agents. Keep updated as project evolves.
