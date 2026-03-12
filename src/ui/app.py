@@ -1,6 +1,4 @@
-"""
-Main UI application for the Minecraft MOD Translator Tool.
-"""
+"""Main UI application for the Minecraft MOD Translator Tool."""
 
 import glob
 import logging
@@ -8,7 +6,7 @@ import os
 import sys
 import time
 import webbrowser
-from typing import Callable, List, Optional
+from typing import List
 
 import flet as ft
 from plyer import notification
@@ -25,45 +23,53 @@ from . import components, styles
 
 logger = logging.getLogger(__name__)
 
+# Window sizing constants
+DEFAULT_WINDOW_WIDTH = 1000
+DEFAULT_WINDOW_HEIGHT = 700
+DEFAULT_WINDOW_PADDING = 30
+
+# UI text constants
+TEXT_FILE_BUTTON = "翻訳するMODのjarファイルを選択"
+TEXT_CLIPBOARD_BUTTON = "クリップボードからパスを取得"
+TEXT_TRANSLATE_BUTTON = "翻訳開始"
+TEXT_FILE_PICKER_TITLE = "翻訳するMODのjarファイルを選択(複数選択可)"
+TEXT_NOTIFICATION_TITLE = "翻訳完了"
+TEXT_NOTIFICATION_SUCCESS = "翻訳が完了しました！リソースパックを確認してください。"
+TEXT_ABOUT_DIALOG = (
+    "このアプリケーションは、MinecraftのMODを翻訳するためのツールです。"
+    "一部翻訳できないMODがあります。"
+)
+
+# Notification settings
+NOTIFICATION_TIMEOUT = 10
+
 
 class MinecraftModTranslatorApp:
     """Main application class for the Minecraft MOD Translator Tool."""
 
-    # UI component for displaying selected files
-    selected_files_text: ft.Text  # type: ignore
-    # List of selected file names
-    file_names: List[str]
-
     def __init__(self):
         """Initialize the application."""
-        # Initialize selected files text component
         self.selected_files_text = ft.Text("", color=config.COLORS["text"], size=14)
-        self.file_names = []
+        self.file_names: List[str] = []
 
     def initialize_ui(self, page: ft.Page) -> None:
-        """
-        Initialize the UI.
+        """Initialize the UI.
 
         Args:
-            page: The page to initialize
+            page: The page to initialize.
         """
-        # Set page properties
-        page.window.width = 1000
-        page.window.height = 700
+        page.window.width = DEFAULT_WINDOW_WIDTH
+        page.window.height = DEFAULT_WINDOW_HEIGHT
         page.theme = styles.create_theme()
-        page.padding = 30
+        page.padding = DEFAULT_WINDOW_PADDING
         page.bgcolor = config.COLORS["background"]
 
-        # Set window icon
         self._set_window_icon(page)
 
-        # Create app bar with settings button
         page.appbar = styles.create_app_bar(
             page,
             on_help_click=lambda e: components.show_dialog(
-                page,
-                "このアプリについて",
-                "このアプリケーションは、MinecraftのMODを翻訳するためのツールです。一部翻訳できないMODがあります。",
+                page, "このアプリについて", TEXT_ABOUT_DIALOG
             ),
             on_github_click=lambda e: components.show_github_dialog(page),
             on_settings_click=lambda e: self._show_settings_dialog(page),
@@ -198,69 +204,62 @@ class MinecraftModTranslatorApp:
             page.update()
 
     def _handle_file_selection(self, e, page: ft.Page) -> None:
-        """
-        Handle file selection.
+        """Handle file selection.
 
         Args:
-            e: File picker result event
-            page: The page
+            e: File picker result event.
+            page: The page.
         """
         if e.files:
-            # Get file paths
             file_paths = [file.path for file in e.files if file.path]
 
             if not file_paths:
-                # Display error message for invalid file selection
-                self.selected_files_text.value = (
-                    "有効なファイルが選択されませんでした。"
-                )  # type: ignore[attr-defined]
+                self.selected_files_text.value = "有効なファイルが選択されませんでした。"  # type: ignore[attr-defined]
                 self.selected_files_text.update()  # type: ignore[attr-defined]
                 components.show_error_dialog(
                     page, "エラー", "有効なjarファイルが見つかりませんでした。"
                 )
                 return
 
-            # Get file names
             self.file_names = [os.path.basename(file_path) for file_path in file_paths]
 
-            # Update selected files text
             self.selected_files_text.value = ", ".join(self.file_names)  # type: ignore[attr-defined]
             self.selected_files_text.update()  # type: ignore[attr-defined]
 
-            # Process the files
             self.process_files(file_paths, self.file_names, page)
         else:
-            # Display cancel message
             self.selected_files_text.value = "キャンセルされました!"  # type: ignore[attr-defined]
             self.selected_files_text.update()  # type: ignore[attr-defined]
 
     def _show_settings_dialog(self, page: ft.Page) -> None:
-        """
-        Show the OpenRouter settings dialog.
+        """Show the OpenRouter settings dialog.
 
         Args:
-            page: The page
+            page: The page.
         """
+
         def on_settings_saved():
             """Callback when settings are saved."""
+            translator.reset_openrouter_client()
+            logger.info("OpenRouter client reset after settings update")
             components.show_dialog(
                 page,
                 "設定保存完了",
-                f"OpenRouter設定が保存されました。\n\nモデル: {config.OPENROUTER_MODEL}\nフォールバック数: {len(config.FALLBACK_MODELS)}",
+                f"OpenRouter設定が保存されました。\n\n"
+                f"モデル: {config.OPENROUTER_MODEL}\n"
+                f"フォールバック数: {len(config.FALLBACK_MODELS)}",
             )
 
         components.show_openrouter_settings_dialog(page, on_settings_saved)
 
     def _handle_window_resize(self, e, page: ft.Page) -> None:
-        """
-        Handle window resize.
+        """Handle window resize event.
 
         Args:
-            e: Resize event
-            page: The page
+            e: Resize event.
+            page: The page.
         """
-        if not hasattr(page, "data") or page.data is None:
-            page.data = {}
+        components.initialize_page_data(page)
 
         progress_container = page.data.get(components.PROGRESS_CONTAINER_KEY)
 

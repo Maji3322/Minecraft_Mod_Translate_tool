@@ -1,21 +1,17 @@
-"""
-UI styles and themes for the application.
-"""
+"""UI styles and themes for the application."""
 
 import flet as ft
 
 from ..utils.config import config
 
-# Color palette
 COLORS = config.COLORS
 
 
 def create_theme() -> ft.Theme:
-    """
-    Create the application theme.
+    """Create the application theme.
 
     Returns:
-        The application theme
+        The application theme.
     """
     return ft.Theme(
         color_scheme_seed=COLORS["primary"],
@@ -26,17 +22,16 @@ def create_theme() -> ft.Theme:
 def create_app_bar(
     page: ft.Page, on_help_click=None, on_github_click=None, on_settings_click=None
 ) -> ft.AppBar:
-    """
-    Create the application bar.
+    """Create the application bar.
 
     Args:
-        page: The page to add the app bar to
-        on_help_click: Callback for help button click
-        on_github_click: Callback for GitHub button click
-        on_settings_click: Callback for settings button click
+        page: The page to add the app bar to.
+        on_help_click: Callback for help button click.
+        on_github_click: Callback for GitHub button click.
+        on_settings_click: Callback for settings button click.
 
     Returns:
-        The application bar
+        The application bar.
     """
     return ft.AppBar(
         leading=ft.Container(
@@ -87,18 +82,17 @@ def create_app_bar(
 def create_button(
     text: str, icon: str, on_click=None, visible: bool = True, animate: bool = True
 ) -> ft.TextButton:
-    """
-    Create a styled button.
+    """Create a styled button.
 
     Args:
-        text: Button text
-        icon: Button icon
-        on_click: Click event handler
-        visible: Whether the button is visible
-        animate: Whether to animate the button
+        text: Button text.
+        icon: Button icon.
+        on_click: Click event handler.
+        visible: Whether the button is visible.
+        animate: Whether to animate the button.
 
     Returns:
-        The styled button
+        The styled button.
     """
     button = ft.TextButton(
         text=text,
@@ -121,17 +115,16 @@ def create_button(
 def create_dropdown(
     label: str, options: list, width: int = 300, on_change=None
 ) -> ft.Dropdown:
-    """
-    Create a styled dropdown.
+    """Create a styled dropdown.
 
     Args:
-        label: Dropdown label
-        options: Dropdown options
-        width: Dropdown width
-        on_change: Change event handler
+        label: Dropdown label.
+        options: Dropdown options.
+        width: Dropdown width.
+        on_change: Change event handler.
 
     Returns:
-        The styled dropdown
+        The styled dropdown.
     """
     return ft.Dropdown(
         label=label,
@@ -146,14 +139,13 @@ def create_dropdown(
 
 
 def create_card(content: ft.Control) -> ft.Card:
-    """
-    Create a styled card.
+    """Create a styled card.
 
     Args:
-        content: Card content
+        content: Card content.
 
     Returns:
-        The styled card
+        The styled card.
     """
     return ft.Card(
         content=ft.Container(
