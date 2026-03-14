@@ -1,0 +1,8 @@
+- Create/update venv with uv: `uv venv .venv`
+- Sync dependencies from requirements: `uv pip sync --python .venv/bin/python requirements.txt` (Windows CI uses `.venv/Scripts/python`)
+- Install uv itself if needed: `python -m pip install uv`
+- Run app from repo root: `python main.py`
+- Alternative module entrypoint: `python -m src.main`
+- Check repo status: `git status --short`
+- Fast file search: `rg --files`, `rg -n <pattern>`
+- Release build flow is defined in `.github/workflows/main.yml` and uses Nuitka on Windows.

@@ -1,10 +1,11 @@
 """Configuration management for the application."""
 
 import os
-import tomllib
 from typing import Dict, Optional
 
 from dotenv import load_dotenv
+
+from src import __version__
 
 load_dotenv()
 
@@ -93,23 +94,12 @@ class Config:
         return self.VERSION_TO_PACK_FORMAT.get(version)
 
     def get_app_version(self) -> str:
-        """Get the application version from pyproject.toml.
+        """Get the application version from the package metadata.
 
         Returns:
-            The version string from pyproject.toml, or "unknown" if not found.
+            The version string used by the packaged application.
         """
-        try:
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.dirname(os.path.dirname(current_dir))
-            pyproject_path = os.path.join(project_root, "pyproject.toml")
-
-            with open(pyproject_path, "rb") as f:
-                data = tomllib.load(f)
-                return data.get("project", {}).get("version", "unknown")
-        except (FileNotFoundError, tomllib.TOMLDecodeError):
-            return "unknown"
-        except Exception:
-            return "unknown"
+        return __version__
 
     @property
     def OPENROUTER_API_KEY(self) -> str:
