@@ -35,18 +35,18 @@ jobs:
                   echo "version=$VERSION" >> $GITHUB_OUTPUT
                   echo "Version extracted and validated: $VERSION"
 
-            - name: Update version in pyproject.toml
+            - name: Update version in src/__init__.py
               shell: bash
               run: |
                   VERSION="${{ steps.get_version.outputs.version }}"
                   
                   # NOTE:
-                  # This updates the version in pyproject.toml only within the CI
+                  # This updates the version in src/__init__.py only within the CI
                   # build environment so that the built artifact embeds the tag
                   # version. These changes are not committed back to the repository,
-                  # so pyproject.toml in the repo may show an older version.
+                  # so src/__init__.py in the repo may show an older version.
                   
-                  # Update version in [project] section only using Python for robust parsing
+                  # Update the package version constant using Python for robust parsing.
                   export VERSION
                   python - << 'PY'
                   import os
@@ -54,33 +54,25 @@ jobs:
                   import re
                   
                   version = os.environ["VERSION"]
-                  path = pathlib.Path("pyproject.toml")
+                  path = pathlib.Path("src/__init__.py")
                   lines = path.read_text(encoding="utf-8").splitlines()
                   
-                  in_project = False
                   updated = False
                   
                   for index, line in enumerate(lines):
-                      if re.match(r'^\[project\]\s*$', line):
-                          in_project = True
-                          continue
-                      
-                      if in_project and re.match(r'^\[(?!project\.)', line):
-                          break
-                      
-                      if in_project and line.startswith("version = "):
-                          lines[index] = f'version = "{version}"'
+                      if re.match(r'^__version__\s*=\s*".*"$', line):
+                          lines[index] = f'__version__ = "{version}"'
                           updated = True
                           break
                   
                   if not updated:
-                      raise SystemExit("version = line not found in [project] section of pyproject.toml")
+                      raise SystemExit("__version__ line not found in src/__init__.py")
                   
                   path.write_text("\n".join(lines) + "\n", encoding="utf-8")
                   PY
                   
-                  echo "Updated pyproject.toml with version $VERSION (CI-only change)"
-                  grep "^version = " pyproject.toml
+                  echo "Updated src/__init__.py with version $VERSION (CI-only change)"
+                  grep '^__version__ = ' src/__init__.py
 
             - name: Set up Python
               uses: actions/setup-python@v5
