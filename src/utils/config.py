@@ -74,6 +74,8 @@ class Config:
         self._pack_format: Optional[int] = None
         self._ollama_base_url: str = self.OLLAMA_DEFAULT_BASE_URL
         self._ollama_model: str = self.OLLAMA_DEFAULT_MODEL
+        self._config_corrupted: bool = False
+        self.load()
 
     @property
     def pack_format(self) -> Optional[int]:
@@ -131,6 +133,36 @@ class Config:
     def OLLAMA_MODEL(self, value: str):
         """Set the Ollama model name."""
         self._ollama_model = value
+
+    @property
+    def config_corrupted(self) -> bool:
+        """True if the config file was found but could not be parsed."""
+        return self._config_corrupted
+
+    def load(self) -> None:
+        """Load Ollama settings from ollama_config.json.
+
+        - File missing: auto-create with defaults (save failure is logged, not raised).
+        - File valid: apply stored values.
+        - File corrupted: keep defaults, set config_corrupted=True.
+        """
+        path = self._config_file_path()
+        self._config_corrupted = False
+
+        if not path.exists():
+            logger.info(f"Config file not found at {path}. Creating with defaults.")
+            self.save()
+            return
+
+        try:
+            with open(path, encoding='utf-8') as f:
+                data = json.load(f)
+            self._ollama_base_url = data.get('ollama_base_url', self.OLLAMA_DEFAULT_BASE_URL)
+            self._ollama_model = data.get('ollama_model', self.OLLAMA_DEFAULT_MODEL)
+            logger.info(f"Loaded Ollama config from {path}")
+        except Exception as e:
+            logger.warning(f"Failed to parse Ollama config at {path}: {e}")
+            self._config_corrupted = True
 
     def save(self) -> None:
         """Write current Ollama settings to ollama_config.json."""
