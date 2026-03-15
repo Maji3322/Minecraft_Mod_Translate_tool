@@ -1,8 +1,14 @@
 """Configuration management for the application."""
 
+import json
+import logging
+import sys
+from pathlib import Path
 from typing import Dict, Optional
 
 from src import __version__
+
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -25,6 +31,17 @@ class Config:
         "1.21 ~ 1.21.3": 35,
         "1.21.4~": 46,
     }
+
+    @staticmethod
+    def _config_file_path() -> Path:
+        """Return the path to the JSON config file.
+
+        In frozen (compiled) mode: next to the executable.
+        In dev mode: at the project root (3 levels above this file).
+        """
+        if getattr(sys, 'frozen', False):
+            return Path(sys.executable).parent / 'ollama_config.json'
+        return Path(__file__).parent.parent.parent / 'ollama_config.json'
 
     # Application directories
     TEMP_DIR = "temp"
