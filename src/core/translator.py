@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
-# Shared OpenAI client instance for connection pooling
-_openrouter_client: Optional[OpenAI] = None
+# Shared Ollama client instance for connection pooling
+_ollama_client: Optional[OpenAI] = None
 
 # Translation prompt constants
 TRANSLATION_SYSTEM_PROMPT = (
@@ -29,58 +29,50 @@ TRANSLATION_SYSTEM_PROMPT = (
     "Return ONLY the translated text without any explanations or additional content."
 )
 
-# Error keywords for authentication issues
-AUTH_ERROR_KEYWORDS = [
-    "authentication",
-    "unauthorized",
-    "invalid api key",
-    "api key",
-    "access denied",
-]
 
-# Error keywords for rate limit issues
-RATE_LIMIT_KEYWORDS = ["429", "402", "rate limit"]
+def get_ollama_client() -> OpenAI:
+    """Get or create a shared Ollama client instance.
 
-
-def get_openrouter_client() -> OpenAI:
-    """Get or create a shared OpenRouter client instance.
-
-    This function ensures a single client instance is reused across all
-    translation calls for efficient connection pooling.
+    Uses the OpenAI-compatible endpoint provided by Ollama.
 
     Returns:
-        OpenAI client configured for OpenRouter.
-
-    Raises:
-        TranslationError: If API key is not configured.
+        OpenAI client configured for Ollama.
     """
-    global _openrouter_client
+    global _ollama_client
 
-    if not config.OPENROUTER_API_KEY or not config.OPENROUTER_API_KEY.strip():
-        raise TranslationError(
-            "OpenRouter API key is not set or is empty. "
-            "Please configure your OpenRouter API key in the application "
-            "settings dialog (⚙️ icon)."
+    if _ollama_client is None:
+        _ollama_client = OpenAI(
+            base_url=f"{config.OLLAMA_BASE_URL}/v1",
+            api_key="ollama",
         )
+        logger.info(f"Created Ollama client at {config.OLLAMA_BASE_URL}, model: {config.OLLAMA_MODEL}")
 
-    if _openrouter_client is None:
-        _openrouter_client = OpenAI(
-            base_url=config.OPENROUTER_BASE_URL, api_key=config.OPENROUTER_API_KEY
-        )
-        logger.info(f"Created OpenRouter client with model: {config.OPENROUTER_MODEL}")
-
-    return _openrouter_client
+    return _ollama_client
 
 
-def reset_openrouter_client() -> None:
-    """Reset the cached OpenRouter client instance.
+def reset_ollama_client() -> None:
+    """Reset the cached Ollama client instance.
 
-    This should be called when the API key changes to ensure
-    the next translation uses the new API key.
+    Call this when the Ollama base URL changes.
     """
-    global _openrouter_client
-    _openrouter_client = None
-    logger.info("Reset OpenRouter client cache")
+    global _ollama_client
+    _ollama_client = None
+    logger.info("Reset Ollama client cache")
+
+
+def check_ollama_availability() -> tuple[bool, bool]:
+    """Check if Ollama is running and the configured model is downloaded.
+
+    Returns:
+        Tuple of (ollama_running, model_downloaded).
+    """
+    from .ollama_api import check_ollama_running, check_model_downloaded
+
+    is_running, tags_data = check_ollama_running(config.OLLAMA_BASE_URL)
+    if not is_running or tags_data is None:
+        return False, False
+    model_ok = check_model_downloaded(tags_data, config.OLLAMA_MODEL)
+    return True, model_ok
 
 
 def retry_on_timeout(max_retries: int = 3, base_delay: int = 2) -> Callable:
@@ -127,13 +119,12 @@ def retry_on_timeout(max_retries: int = 3, base_delay: int = 2) -> Callable:
     max_retries=config.MAX_TRANSLATION_RETRIES,
     base_delay=config.TRANSLATION_RETRY_BASE_DELAY,
 )
-def translate_text(client: OpenAI, text: str, model: str = "") -> str:
-    """Translate text using OpenRouter LLM with retry and fallback.
+def translate_text(client: OpenAI, text: str) -> str:
+    """Translate text using Ollama LLM with retry on timeout.
 
     Args:
-        client: The OpenAI client configured for OpenRouter.
+        client: The OpenAI client configured for Ollama.
         text: The text to translate.
-        model: Optional specific model to use (overrides config).
 
     Returns:
         The translated text.
@@ -141,48 +132,18 @@ def translate_text(client: OpenAI, text: str, model: str = "") -> str:
     Raises:
         TranslationError: If the translation fails after retries.
     """
-    current_model = model if model else config.OPENROUTER_MODEL
-    models_to_try = [current_model] + config.FALLBACK_MODELS
-    last_error = None
+    model = config.OLLAMA_MODEL
+    if not model:
+        raise TranslationError("No Ollama model configured")
 
-    for attempt_model in models_to_try:
-        if not attempt_model:
-            continue
-
-        try:
-            logger.info(f"Translating with model: {attempt_model}")
-            result = _perform_translation(client, text, attempt_model)
-            return _clean_translation_result(result, text)
-
-        except Exception as e:
-            last_error = e
-            error_msg = str(e).lower()
-
-            if _is_rate_limit_error(error_msg):
-                logger.warning(
-                    f"Rate limit hit with model {attempt_model}, trying fallback..."
-                )
-                continue
-
-            if _is_auth_error(error_msg):
-                logger.error(f"Non-retryable authentication error: {e}")
-                raise TranslationError(
-                    f"LLM translation failed (non-retryable auth error): {e}"
-                ) from e
-
-            logger.warning(
-                f"Error with model {attempt_model}: {e}. Trying fallback...",
-                exc_info=True,
-            )
-            continue
-
-    if last_error:
-        logger.error(f"All models failed, last error: {last_error}")
-        raise TranslationError(
-            f"Translation failed with all models: {last_error}"
-        ) from last_error
-    else:
-        raise TranslationError("No models configured for translation")
+    try:
+        logger.info(f"Translating with model: {model}")
+        result = _perform_translation(client, text, model)
+        return _clean_translation_result(result, text)
+    except TranslationError:
+        raise
+    except Exception as e:
+        raise TranslationError(f"Translation failed: {e}") from e
 
 
 def _perform_translation(client: OpenAI, text: str, model: str) -> Optional[str]:
@@ -227,32 +188,8 @@ def _clean_translation_result(result: Optional[str], original_text: str) -> str:
     return result
 
 
-def _is_rate_limit_error(error_msg: str) -> bool:
-    """Check if error message indicates rate limit.
-
-    Args:
-        error_msg: Lowercase error message.
-
-    Returns:
-        True if rate limit error.
-    """
-    return any(keyword in error_msg for keyword in RATE_LIMIT_KEYWORDS)
-
-
-def _is_auth_error(error_msg: str) -> bool:
-    """Check if error message indicates authentication issue.
-
-    Args:
-        error_msg: Lowercase error message.
-
-    Returns:
-        True if authentication error.
-    """
-    return any(keyword in error_msg for keyword in AUTH_ERROR_KEYWORDS)
-
-
 def translate_json_file(lang_file_path: str, page=None) -> bool:
-    """Translate a JSON language file using OpenRouter LLM to ja_jp.json.
+    """Translate a JSON language file using Ollama LLM to ja_jp.json.
 
     Args:
         lang_file_path: Path to the en_us.json file.
@@ -267,11 +204,11 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
     start_time = time.time()
 
     try:
-        client = get_openrouter_client()
+        client = get_ollama_client()
 
         logger.info(
             f"Starting LLM translation of {lang_file_path} "
-            f"using model: {config.OPENROUTER_MODEL}"
+            f"using model: {config.OLLAMA_MODEL}"
         )
 
         with open(lang_file_path, "r", encoding="utf-8") as f:

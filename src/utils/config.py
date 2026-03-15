@@ -1,13 +1,8 @@
 """Configuration management for the application."""
 
-import os
 from typing import Dict, Optional
 
-from dotenv import load_dotenv
-
 from src import __version__
-
-load_dotenv()
 
 
 class Config:
@@ -53,16 +48,15 @@ class Config:
     MAX_TRANSLATION_RETRIES = 5
     TRANSLATION_RETRY_BASE_DELAY = 3
 
-    # OpenRouter settings (class variables for defaults from env)
-    OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-    _env_api_key = os.getenv("OPENROUTER_API_KEY", "")
+    # Ollama settings
+    OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
+    OLLAMA_DEFAULT_MODEL = "mitmul/plamo-2-translate"
 
     def __init__(self):
         """Initialize configuration with default values."""
         self._pack_format: Optional[int] = None
-        self._openrouter_api_key: str = self._env_api_key
-        self._openrouter_model: str = ""
-        self._fallback_models: list[str] = []
+        self._ollama_base_url: str = self.OLLAMA_DEFAULT_BASE_URL
+        self._ollama_model: str = self.OLLAMA_DEFAULT_MODEL
 
     @property
     def pack_format(self) -> Optional[int]:
@@ -102,58 +96,24 @@ class Config:
         return __version__
 
     @property
-    def OPENROUTER_API_KEY(self) -> str:
-        """Get the OpenRouter API key (in-memory only).
+    def OLLAMA_BASE_URL(self) -> str:
+        """Get the Ollama server base URL."""
+        return self._ollama_base_url
 
-        Returns:
-            The configured API key.
-        """
-        return self._openrouter_api_key
-
-    @OPENROUTER_API_KEY.setter
-    def OPENROUTER_API_KEY(self, value: str):
-        """Set the OpenRouter API key (in-memory only).
-
-        Args:
-            value: The API key to set.
-        """
-        self._openrouter_api_key = value
+    @OLLAMA_BASE_URL.setter
+    def OLLAMA_BASE_URL(self, value: str):
+        """Set the Ollama server base URL."""
+        self._ollama_base_url = value
 
     @property
-    def OPENROUTER_MODEL(self) -> str:
-        """Get the OpenRouter model.
+    def OLLAMA_MODEL(self) -> str:
+        """Get the Ollama model name."""
+        return self._ollama_model
 
-        Returns:
-            The configured model name.
-        """
-        return self._openrouter_model
-
-    @OPENROUTER_MODEL.setter
-    def OPENROUTER_MODEL(self, value: str):
-        """Set the OpenRouter model.
-
-        Args:
-            value: The model name to set.
-        """
-        self._openrouter_model = value
-
-    @property
-    def FALLBACK_MODELS(self) -> list[str]:
-        """Get the fallback models list.
-
-        Returns:
-            List of fallback model names.
-        """
-        return self._fallback_models
-
-    @FALLBACK_MODELS.setter
-    def FALLBACK_MODELS(self, value: list[str]):
-        """Set the fallback models list.
-
-        Args:
-            value: List of model names to use as fallbacks.
-        """
-        self._fallback_models = value
+    @OLLAMA_MODEL.setter
+    def OLLAMA_MODEL(self, value: str):
+        """Set the Ollama model name."""
+        self._ollama_model = value
 
 
 # Global config instance
