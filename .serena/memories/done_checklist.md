@@ -1,6 +1,0 @@
-- After code changes, run existing tests if present and fix failures with minimal changes.
-- For bug fixes/features, add at least one regression or unit test when test infrastructure exists.
-- Respect existing lint/format/type settings if configured; fix lint/type issues before feature work.
-- Avoid broad formatting of unrelated files.
-- Manually sanity-check GUI-related behavior when possible because this is a desktop Flet app.
-- If packaging/versioning is touched, also verify `.github/workflows/main.yml`, release docs, and any runtime version lookup remain consistent.
