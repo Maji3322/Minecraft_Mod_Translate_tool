@@ -185,7 +185,7 @@ def translate_text(client: OpenAI, text: str, model: str = "") -> str:
         raise TranslationError("No models configured for translation")
 
 
-def _perform_translation(client: OpenAI, text: str, model: str) -> str:
+def _perform_translation(client: OpenAI, text: str, model: str) -> Optional[str]:
     """Perform actual translation API call.
 
     Args:
@@ -194,7 +194,7 @@ def _perform_translation(client: OpenAI, text: str, model: str) -> str:
         model: Model to use.
 
     Returns:
-        Translated text.
+        Translated text or None if failed.
     """
     response = client.chat.completions.create(
         model=model,

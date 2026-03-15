@@ -1,11 +1,11 @@
 """Main UI application for the Minecraft MOD Translator Tool."""
 
+import asyncio
 import glob
 import logging
 import os
 import sys
 import time
-import webbrowser
 from typing import List
 
 import flet as ft
@@ -77,7 +77,7 @@ class MinecraftModTranslatorApp:
 
         # Create file picker
         pick_file_dialog = ft.FilePicker(
-            on_result=lambda e: self._handle_file_selection(e, page)
+            on_upload=lambda e: self._handle_file_selection(e, page)
         )
         page.overlay.append(pick_file_dialog)
 
@@ -85,13 +85,13 @@ class MinecraftModTranslatorApp:
         version_dropdown = styles.create_dropdown(
             "MODの対応バージョン",
             list(config.VERSION_TO_PACK_FORMAT.keys()),
-            on_change=lambda e: self._handle_version_change(e, page),
+            on_select=lambda e: self._handle_version_change(e, page),
         )
 
         # Create file selection buttons (initially hidden)
         self.file_button = styles.create_button(
             "翻訳するMODのjarファイルを選択",
-            ft.Icons.ATTACH_FILE,
+            icon=ft.Icons.ATTACH_FILE,
             on_click=lambda _: pick_file_dialog.pick_files(
                 allow_multiple=True,
                 initial_directory=os.path.expanduser("~\\Downloads"),
@@ -477,10 +477,15 @@ class MinecraftModTranslatorApp:
                     logger.error(f"Failed to send notification: {e}", exc_info=True)
 
             # Open output directory
-            os.startfile(os.path.dirname(config.OUTPUT_DIR))
+            os.startfile(os.path.dirname(config.OUTPUT_DIR)) # type: ignore
 
             # Close the window
-            page.window.close()
+            # If we call page.window.close() directly here,
+            # it just serves co-routines and doesn't actually close the window
+            # until the user interacts with it again.
+            # To work around this, we can use asyncio to run the close operation
+            # in the event loop, which allows it to execute immediately.
+            asyncio.get_running_loop().run_in_executor(None, page.window.close)
 
             # Exit the program
             sys.exit(0)
