@@ -679,6 +679,7 @@ def show_ollama_settings_dialog(page: ft.Page, on_save: Callable) -> None:
         url_changed = config.OLLAMA_BASE_URL != url
         config.OLLAMA_BASE_URL = url
         config.OLLAMA_MODEL = model
+        config.save()
         if url_changed:
             reset_ollama_client()
         page.pop_dialog()
