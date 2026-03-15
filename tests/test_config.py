@@ -72,3 +72,59 @@ class ConfigSaveTests(unittest.TestCase):
             # Now point to an unwritable location
             with patch.object(Config, '_config_file_path', lambda self=None: Path('/nonexistent/dir/config.json')):
                 cfg.save()  # Should not raise
+
+
+class ConfigLoadTests(unittest.TestCase):
+    """Tests for Config.load()."""
+
+    def test_load_reads_url_and_model(self):
+        """load() sets URL and model from valid JSON file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'ollama_config.json'
+            config_path.write_text(json.dumps({
+                'ollama_base_url': 'http://remote:11434',
+                'ollama_model': 'custom-model',
+            }), encoding='utf-8')
+
+            with patch.object(Config, '_config_file_path', lambda self=None: config_path):
+                cfg = Config()
+
+        self.assertEqual(cfg.OLLAMA_BASE_URL, 'http://remote:11434')
+        self.assertEqual(cfg.OLLAMA_MODEL, 'custom-model')
+        self.assertFalse(cfg.config_corrupted)
+
+    def test_load_creates_file_when_missing(self):
+        """load() auto-creates ollama_config.json with defaults when file is absent."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'ollama_config.json'
+            # Patch before Config() so both __init__'s load() and save() use temp path
+            with patch.object(Config, '_config_file_path', lambda self=None: config_path):
+                cfg = Config()
+
+            self.assertTrue(config_path.exists())
+            data = json.loads(config_path.read_text(encoding='utf-8'))
+
+        self.assertEqual(data['ollama_base_url'], Config.OLLAMA_DEFAULT_BASE_URL)
+        self.assertEqual(data['ollama_model'], Config.OLLAMA_DEFAULT_MODEL)
+        self.assertFalse(cfg.config_corrupted)
+
+    def test_load_sets_corrupted_flag_on_bad_json(self):
+        """load() sets config_corrupted=True and keeps defaults when JSON is invalid."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'ollama_config.json'
+            config_path.write_text('{ not valid json', encoding='utf-8')
+
+            with patch.object(Config, '_config_file_path', lambda self=None: config_path):
+                cfg = Config()
+
+        self.assertTrue(cfg.config_corrupted)
+        self.assertEqual(cfg.OLLAMA_BASE_URL, Config.OLLAMA_DEFAULT_BASE_URL)
+        self.assertEqual(cfg.OLLAMA_MODEL, Config.OLLAMA_DEFAULT_MODEL)
+
+    def test_config_corrupted_is_false_by_default(self):
+        """config_corrupted is False on a fresh Config with a missing file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'ollama_config.json'
+            with patch.object(Config, '_config_file_path', lambda self=None: config_path):
+                cfg = Config()
+        self.assertFalse(cfg.config_corrupted)
