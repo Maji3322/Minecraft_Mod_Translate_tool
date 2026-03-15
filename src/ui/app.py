@@ -1,11 +1,11 @@
 """Main UI application for the Minecraft MOD Translator Tool."""
 
+import asyncio
 import glob
 import logging
 import os
 import sys
 import time
-import webbrowser
 from typing import List
 
 import flet as ft
@@ -51,6 +51,7 @@ class MinecraftModTranslatorApp:
         """Initialize the application."""
         self.selected_files_text = ft.Text("", color=config.COLORS["text"], size=14)
         self.file_names: List[str] = []
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     def initialize_ui(self, page: ft.Page) -> None:
         """Initialize the UI.
@@ -58,6 +59,7 @@ class MinecraftModTranslatorApp:
         Args:
             page: The page to initialize.
         """
+        self._loop = asyncio.get_running_loop()
         page.window.width = DEFAULT_WINDOW_WIDTH
         page.window.height = DEFAULT_WINDOW_HEIGHT
         page.theme = styles.create_theme()
@@ -75,38 +77,59 @@ class MinecraftModTranslatorApp:
             on_settings_click=lambda e: self._show_settings_dialog(page),
         )
 
-        # Create file picker
-        pick_file_dialog = ft.FilePicker(
-            on_result=lambda e: self._handle_file_selection(e, page)
-        )
-        page.overlay.append(pick_file_dialog)
 
         # Create version dropdown
         version_dropdown = styles.create_dropdown(
             "MODの対応バージョン",
             list(config.VERSION_TO_PACK_FORMAT.keys()),
-            on_change=lambda e: self._handle_version_change(e, page),
+            on_select=lambda e: self._handle_version_change(e, page),
         )
 
         # Create file selection buttons (initially hidden)
-        self.file_button = styles.create_button(
-            "翻訳するMODのjarファイルを選択",
-            ft.Icons.ATTACH_FILE,
-            on_click=lambda _: pick_file_dialog.pick_files(
+        async def open_file_picker(_):
+            files = await ft.FilePicker().pick_files(
                 allow_multiple=True,
                 initial_directory=os.path.expanduser("~\\Downloads"),
                 allowed_extensions=["jar"],
                 dialog_title="翻訳するMODのjarファイルを選択(複数選択可)",
-            ),
+            )
+            if files:
+                file_paths = [file.path for file in files if file.path]
+                if not file_paths:
+                    self.selected_files_text.value = "有効なファイルが選択されませんでした。"
+                    self.selected_files_text.update()
+                    components.show_error_dialog(
+                        page, "エラー", "有効なjarファイルが見つかりませんでした。"
+                    )
+                    return
+                self.file_names = [os.path.basename(fp) for fp in file_paths]
+                self.selected_files_text.value = ", ".join(self.file_names)
+                self.selected_files_text.update()
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(
+                    None, self.process_files, file_paths, self.file_names, page
+                )
+            else:
+                self.selected_files_text.value = "キャンセルされました!"
+                self.selected_files_text.update()
+
+        async def open_clipboard(_):
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, components.select_file_from_clipboard, page, self.process_files
+            )
+
+        self.file_button = styles.create_button(
+            "翻訳するMODのjarファイルを選択",
+            icon=ft.Icons.ATTACH_FILE,
+            on_click=open_file_picker,
             visible=False,
         )
 
         self.clipboard_button = styles.create_button(
             "クリップボードからパスを取得",
             ft.Icons.CONTENT_PASTE,
-            on_click=lambda _: components.select_file_from_clipboard(
-                page, self.process_files
-            ),
+            on_click=open_clipboard,
             visible=False,
         )
 
@@ -148,6 +171,10 @@ class MinecraftModTranslatorApp:
 
         # Update the page
         page.update()
+
+        # Show dialog if config file was corrupted on startup
+        if config.config_corrupted:
+            self._show_corrupted_config_dialog(page)
 
     def _set_window_icon(self, page: ft.Page) -> None:
         """
@@ -203,36 +230,8 @@ class MinecraftModTranslatorApp:
 
             page.update()
 
-    def _handle_file_selection(self, e, page: ft.Page) -> None:
-        """Handle file selection.
-
-        Args:
-            e: File picker result event.
-            page: The page.
-        """
-        if e.files:
-            file_paths = [file.path for file in e.files if file.path]
-
-            if not file_paths:
-                self.selected_files_text.value = "有効なファイルが選択されませんでした。"  # type: ignore[attr-defined]
-                self.selected_files_text.update()  # type: ignore[attr-defined]
-                components.show_error_dialog(
-                    page, "エラー", "有効なjarファイルが見つかりませんでした。"
-                )
-                return
-
-            self.file_names = [os.path.basename(file_path) for file_path in file_paths]
-
-            self.selected_files_text.value = ", ".join(self.file_names)  # type: ignore[attr-defined]
-            self.selected_files_text.update()  # type: ignore[attr-defined]
-
-            self.process_files(file_paths, self.file_names, page)
-        else:
-            self.selected_files_text.value = "キャンセルされました!"  # type: ignore[attr-defined]
-            self.selected_files_text.update()  # type: ignore[attr-defined]
-
     def _show_settings_dialog(self, page: ft.Page) -> None:
-        """Show the OpenRouter settings dialog.
+        """Show the Ollama settings dialog.
 
         Args:
             page: The page.
@@ -240,17 +239,47 @@ class MinecraftModTranslatorApp:
 
         def on_settings_saved():
             """Callback when settings are saved."""
-            translator.reset_openrouter_client()
-            logger.info("OpenRouter client reset after settings update")
+            translator.reset_ollama_client()
+            logger.info("Ollama client reset after settings update")
             components.show_dialog(
                 page,
                 "設定保存完了",
-                f"OpenRouter設定が保存されました。\n\n"
-                f"モデル: {config.OPENROUTER_MODEL}\n"
-                f"フォールバック数: {len(config.FALLBACK_MODELS)}",
+                f"Ollama設定が保存されました。\n\n"
+                f"サーバー: {config.OLLAMA_BASE_URL}\n"
+                f"モデル: {config.OLLAMA_MODEL}",
             )
 
-        components.show_openrouter_settings_dialog(page, on_settings_saved)
+        components.show_ollama_settings_dialog(page, on_settings_saved)
+
+    def _show_corrupted_config_dialog(self, page: ft.Page) -> None:
+        """Show a dialog when ollama_config.json is corrupted.
+
+        Args:
+            page: The page to show the dialog on.
+        """
+        def recreate(e):
+            page.pop_dialog()
+            config.save()
+            config.load()
+            logger.info("Recreated corrupted ollama_config.json with defaults")
+
+        def cancel(e):
+            page.pop_dialog()
+
+        dialog = ft.AlertDialog(
+            title=ft.Text("設定ファイルのエラー"),
+            content=ft.Text(
+                "設定ファイル (ollama_config.json) が壊れています。\n"
+                "新しく作成しますか？（デフォルト値に戻ります）"
+            ),
+            actions=[
+                ft.TextButton("キャンセル", on_click=cancel),
+                ft.ElevatedButton("新規作成", on_click=recreate),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+            modal=True,
+        )
+        page.show_dialog(dialog)
 
     def _handle_window_resize(self, e, page: ft.Page) -> None:
         """Handle window resize event.
@@ -280,6 +309,15 @@ class MinecraftModTranslatorApp:
             page: The page
         """
         try:
+            # Check Ollama availability before doing any work
+            ollama_running, model_ok = translator.check_ollama_availability()
+            if not ollama_running:
+                components.show_ollama_not_found_dialog(page)
+                return
+            if not model_ok:
+                components.show_model_not_found_dialog(page, config.OLLAMA_MODEL)
+                return
+
             # Hide selection UI
             components.hide_selection_ui(page)
 
@@ -358,20 +396,20 @@ class MinecraftModTranslatorApp:
                 self._finish_translation(page, len(lang_files_to_translate))
             else:
                 components.show_error_dialog(page, "エラー", "翻訳に失敗しました。")
-                sys.exit(1)
+                components.show_selection_ui(page)
 
         except (FileOperationError, ResourcePackError, TranslationError, UIError) as e:
             logger.error(f"Error processing files: {e}", exc_info=True)
             components.show_error_dialog(
                 page, "エラー", f"処理中にエラーが発生しました: {str(e)}"
             )
-            sys.exit(1)
+            components.show_selection_ui(page)
         except Exception as e:
             logger.error(f"Unexpected error: {e}", exc_info=True)
             components.show_error_dialog(
                 page, "エラー", f"予期せぬエラーが発生しました: {str(e)}"
             )
-            sys.exit(1)
+            components.show_selection_ui(page)
 
     def _find_language_files(self) -> List[str]:
         """
@@ -477,13 +515,13 @@ class MinecraftModTranslatorApp:
                     logger.error(f"Failed to send notification: {e}", exc_info=True)
 
             # Open output directory
-            os.startfile(os.path.dirname(config.OUTPUT_DIR))
+            os.startfile(os.path.dirname(config.OUTPUT_DIR)) # type: ignore
 
             # Close the window
-            page.window.close()
-
-            # Exit the program
-            sys.exit(0)
+            # _finish_translation runs in a thread (via run_in_executor),
+            # so we must schedule the async close() on the main event loop.
+            if self._loop:
+                asyncio.run_coroutine_threadsafe(page.window.close(), self._loop)
         except Exception as e:
             logger.error(f"Error finishing translation: {e}", exc_info=True)
             raise UIError("Failed to finish translation") from e

@@ -1,0 +1,4 @@
+{
+  "ollama_base_url": "http://localhost:11434",
+  "ollama_model": "mitmul/plamo-2-translate"
+}

@@ -70,7 +70,7 @@ def create_app_bar(
                         ft.IconButton(
                             ft.Icons.SETTINGS,
                             icon_color=COLORS["primary"],
-                            tooltip="OpenRouter設定",
+                            tooltip="Ollama設定",
                             on_click=on_settings_click,
                         ),
                         ft.IconButton(
@@ -95,12 +95,16 @@ def create_app_bar(
 
 
 def create_button(
-    text: str, icon: str, on_click=None, visible: bool = True, animate: bool = True
+    content: str,
+    icon: ft.IconDataOrControl,
+    on_click=None,
+    visible: bool = True,
+    animate: bool = True,
 ) -> ft.TextButton:
-    """Create a styled button.
+    """Create a common styled button.
 
     Args:
-        text: Button text.
+        content: Button content.
         icon: Button icon.
         on_click: Click event handler.
         visible: Whether the button is visible.
@@ -110,7 +114,7 @@ def create_button(
         The styled button.
     """
     button = ft.TextButton(
-        text=text,
+        content=content,
         icon=icon,
         style=ft.ButtonStyle(
             bgcolor=COLORS["secondary"],
@@ -128,7 +132,7 @@ def create_button(
 
 
 def create_dropdown(
-    label: str, options: list, width: int = 300, on_change=None
+    label: str, options: list, width: int = 300, on_select=None
 ) -> ft.Dropdown:
     """Create a styled dropdown.
 
@@ -136,7 +140,7 @@ def create_dropdown(
         label: Dropdown label.
         options: Dropdown options.
         width: Dropdown width.
-        on_change: Change event handler.
+        on_select: Selection event handler.
 
     Returns:
         The styled dropdown.
@@ -149,7 +153,7 @@ def create_dropdown(
         focused_border_color=COLORS["primary"],
         label_style=ft.TextStyle(color=COLORS["text"]),
         text_style=ft.TextStyle(color=COLORS["text"]),
-        on_change=on_change,
+        on_select=on_select,
     )
 
 
@@ -168,5 +172,5 @@ def create_card(content: ft.Control) -> ft.Card:
             content=content,
         ),
         elevation=8,
-        color=COLORS["card"],
+        bgcolor=COLORS["card"],
     )

@@ -1,13 +1,14 @@
 """Configuration management for the application."""
 
-import os
+import json
+import logging
+import sys
+from pathlib import Path
 from typing import Dict, Optional
-
-from dotenv import load_dotenv
 
 from src import __version__
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -31,6 +32,17 @@ class Config:
         "1.21.4~": 46,
     }
 
+    @staticmethod
+    def _config_file_path() -> Path:
+        """Return the path to the JSON config file.
+
+        In frozen (compiled) mode: next to the executable.
+        In dev mode: at the project root (3 levels above this file).
+        """
+        if getattr(sys, 'frozen', False):
+            return Path(sys.executable).parent / 'ollama_config.json'
+        return Path(__file__).parent.parent.parent / 'ollama_config.json'
+
     # Application directories
     TEMP_DIR = "temp"
     OUTPUT_DIR = "translate_rp"
@@ -53,16 +65,17 @@ class Config:
     MAX_TRANSLATION_RETRIES = 5
     TRANSLATION_RETRY_BASE_DELAY = 3
 
-    # OpenRouter settings (class variables for defaults from env)
-    OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-    _env_api_key = os.getenv("OPENROUTER_API_KEY", "")
+    # Ollama settings
+    OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
+    OLLAMA_DEFAULT_MODEL = "mitmul/plamo-2-translate"
 
     def __init__(self):
         """Initialize configuration with default values."""
         self._pack_format: Optional[int] = None
-        self._openrouter_api_key: str = self._env_api_key
-        self._openrouter_model: str = ""
-        self._fallback_models: list[str] = []
+        self._ollama_base_url: str = self.OLLAMA_DEFAULT_BASE_URL
+        self._ollama_model: str = self.OLLAMA_DEFAULT_MODEL
+        self._config_corrupted: bool = False
+        self.load()
 
     @property
     def pack_format(self) -> Optional[int]:
@@ -102,58 +115,68 @@ class Config:
         return __version__
 
     @property
-    def OPENROUTER_API_KEY(self) -> str:
-        """Get the OpenRouter API key (in-memory only).
+    def OLLAMA_BASE_URL(self) -> str:
+        """Get the Ollama server base URL."""
+        return self._ollama_base_url
 
-        Returns:
-            The configured API key.
-        """
-        return self._openrouter_api_key
-
-    @OPENROUTER_API_KEY.setter
-    def OPENROUTER_API_KEY(self, value: str):
-        """Set the OpenRouter API key (in-memory only).
-
-        Args:
-            value: The API key to set.
-        """
-        self._openrouter_api_key = value
+    @OLLAMA_BASE_URL.setter
+    def OLLAMA_BASE_URL(self, value: str):
+        """Set the Ollama server base URL."""
+        self._ollama_base_url = value
 
     @property
-    def OPENROUTER_MODEL(self) -> str:
-        """Get the OpenRouter model.
+    def OLLAMA_MODEL(self) -> str:
+        """Get the Ollama model name."""
+        return self._ollama_model
 
-        Returns:
-            The configured model name.
-        """
-        return self._openrouter_model
-
-    @OPENROUTER_MODEL.setter
-    def OPENROUTER_MODEL(self, value: str):
-        """Set the OpenRouter model.
-
-        Args:
-            value: The model name to set.
-        """
-        self._openrouter_model = value
+    @OLLAMA_MODEL.setter
+    def OLLAMA_MODEL(self, value: str):
+        """Set the Ollama model name."""
+        self._ollama_model = value
 
     @property
-    def FALLBACK_MODELS(self) -> list[str]:
-        """Get the fallback models list.
+    def config_corrupted(self) -> bool:
+        """True if the config file was found but could not be parsed."""
+        return self._config_corrupted
 
-        Returns:
-            List of fallback model names.
+    def load(self) -> None:
+        """Load Ollama settings from ollama_config.json.
+
+        - File missing: auto-create with defaults (save failure is logged, not raised).
+        - File valid: apply stored values.
+        - File corrupted: keep defaults, set config_corrupted=True.
         """
-        return self._fallback_models
+        path = self._config_file_path()
+        self._config_corrupted = False
 
-    @FALLBACK_MODELS.setter
-    def FALLBACK_MODELS(self, value: list[str]):
-        """Set the fallback models list.
+        if not path.exists():
+            logger.info(f"Config file not found at {path}. Creating with defaults.")
+            self.save()
+            return
 
-        Args:
-            value: List of model names to use as fallbacks.
-        """
-        self._fallback_models = value
+        try:
+            with open(path, encoding='utf-8') as f:
+                data = json.load(f)
+            self._ollama_base_url = data.get('ollama_base_url', self.OLLAMA_DEFAULT_BASE_URL)
+            self._ollama_model = data.get('ollama_model', self.OLLAMA_DEFAULT_MODEL)
+            logger.info(f"Loaded Ollama config from {path}")
+        except Exception as e:
+            logger.warning(f"Failed to parse Ollama config at {path}: {e}")
+            self._config_corrupted = True
+
+    def save(self) -> None:
+        """Write current Ollama settings to ollama_config.json."""
+        path = self._config_file_path()
+        try:
+            data = {
+                'ollama_base_url': self._ollama_base_url,
+                'ollama_model': self._ollama_model,
+            }
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+            logger.info(f"Saved Ollama config to {path}")
+        except Exception as e:
+            logger.warning(f"Failed to save Ollama config to {path}: {e}")
 
 
 # Global config instance

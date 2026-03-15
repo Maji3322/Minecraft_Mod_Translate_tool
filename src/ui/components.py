@@ -69,8 +69,7 @@ def show_dialog(
     """
 
     def close_dialog(e):
-        dialog.open = False
-        page.update()
+        page.pop_dialog()
         if on_dismiss:
             on_dismiss()
 
@@ -85,9 +84,7 @@ def show_dialog(
         modal=modal,
     )
 
-    page.dialog = dialog  # type: ignore[attr-defined]
-    dialog.open = True  # type: ignore[attr-defined]
-    page.update()
+    page.show_dialog(dialog)
 
 
 def show_error_dialog(page: ft.Page, title: str, message: str) -> None:
@@ -113,8 +110,7 @@ def show_github_dialog(page: ft.Page) -> None:
         close_dialog(e)
 
     def close_dialog(e):
-        dialog.open = False
-        page.update()
+        page.pop_dialog()
 
     dialog = ft.AlertDialog(
         modal=True,
@@ -133,9 +129,7 @@ def show_github_dialog(page: ft.Page) -> None:
         ],
     )
 
-    page.dialog = dialog  # type: ignore[attr-defined]
-    dialog.open = True  # type: ignore[attr-defined]
-    page.update()
+    page.show_dialog(dialog)
 
 
 def make_loading_indicator(page: ft.Page) -> ft.Container:
@@ -166,7 +160,7 @@ def make_loading_indicator(page: ft.Page) -> ft.Container:
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=10,
         ),
-        alignment=ft.alignment.center,
+        alignment=ft.Alignment.CENTER,
         expand=True,
         visible=False,
     )
@@ -250,7 +244,7 @@ def make_progress_bar(page: ft.Page, file_path: str) -> Tuple[ft.ProgressBar, ft
                             size=16,
                             weight=ft.FontWeight.BOLD,
                         ),
-                        alignment=ft.alignment.center,
+                        alignment=ft.Alignment.CENTER,
                         expand=True,
                     ),
                     ft.VerticalDivider(
@@ -266,7 +260,7 @@ def make_progress_bar(page: ft.Page, file_path: str) -> Tuple[ft.ProgressBar, ft
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             spacing=10,
                         ),
-                        alignment=ft.alignment.center,
+                        alignment=ft.Alignment.CENTER,
                         expand=True,
                     ),
                 ],
@@ -274,7 +268,7 @@ def make_progress_bar(page: ft.Page, file_path: str) -> Tuple[ft.ProgressBar, ft
             ),
         ),
         elevation=4,
-        color=config.COLORS["card"],
+        bgcolor=config.COLORS["card"],
     )
 
     initialize_page_data(page)
@@ -346,9 +340,7 @@ def update_progress_bar(
         elapsed_str = format_time(elapsed_time)
         remaining_str = format_time(remaining_time)
 
-        info_text.value = (
-            f"翻訳中... {current}/{total} ({progress:.1%}) - 残り時間: {remaining_str}"
-        )
+        info_text.value = f"翻訳中... {current}/{total} ({progress:.1%}) - 経過時間: {elapsed_str}, 残り時間: {remaining_str}"
     else:
         info_text.value = f"翻訳中... {current}/{total} ({progress:.1%})"
 
@@ -425,7 +417,7 @@ def make_extract_progress(page: ft.Page) -> Tuple[ft.ProgressBar, ft.Text]:
             content=ft.Column(
                 controls=[
                     ft.Text(
-                        EXTRACTION_CARD_TEXT,  # 定数を使用
+                        TEXT_EXTRACTION_CARD,
                         color=config.COLORS["text"],
                         size=16,
                         weight=ft.FontWeight.BOLD,
@@ -438,7 +430,7 @@ def make_extract_progress(page: ft.Page) -> Tuple[ft.ProgressBar, ft.Text]:
             ),
         ),
         elevation=4,
-        color=config.COLORS["card"],
+        bgcolor=config.COLORS["card"],
     )
 
     # Create or get the progress container
@@ -637,282 +629,81 @@ def select_file_from_clipboard(page: ft.Page, process_callback: Callable) -> Non
         raise UIError("Failed to select files from clipboard") from e
 
 
-def show_openrouter_settings_dialog(page: ft.Page, on_save: Callable) -> None:
-    """
-    Show a dialog for OpenRouter API key and model configuration.
+def show_selection_ui(page: ft.Page) -> None:
+    """Show the version selection and file selection UI (reverse of hide_selection_ui).
 
     Args:
-        page: The page to show the dialog on
-        on_save: Callback function when settings are saved
+        page: The page containing the selection UI.
     """
-    from ..core.openrouter_api import OpenRouterAPI
+    if page.controls:
+        for control in page.controls:
+            if isinstance(control, ft.Container) and isinstance(
+                control.content, ft.Card
+            ):
+                control.visible = True
+                break
+    page.update()
 
-    # Create API key input field
-    api_key_field = ft.TextField(
-        label="OpenRouter APIキー",
-        password=True,
-        can_reveal_password=True,
-        hint_text="sk-or-v1-...",
-        value=config.OPENROUTER_API_KEY if config.OPENROUTER_API_KEY else "",
-        width=500,
+
+def show_ollama_settings_dialog(page: ft.Page, on_save: Callable) -> None:
+    """Show a dialog for Ollama server URL and model configuration.
+
+    Args:
+        page: The page to show the dialog on.
+        on_save: Callback function when settings are saved.
+    """
+    from ..core.translator import reset_ollama_client
+
+    url_field = ft.TextField(
+        label="Ollama サーバー URL",
+        hint_text="http://localhost:11434",
+        value=config.OLLAMA_BASE_URL,
+        width=420,
     )
-
-    # Create model search field
-    model_search_field = ft.TextField(
-        label="モデル検索 (部分一致)",
-        hint_text="llama, gpt, gemini など",
-        width=500,
+    model_field = ft.TextField(
+        label="モデル名",
+        hint_text="mitmul/plamo-2-translate",
+        value=config.OLLAMA_MODEL,
+        width=420,
     )
-
-    # Create model list view
-    model_listview = ft.ListView(
-        height=300,
-        width=500,
-        spacing=5,
-    )
-
-    # Create fallback models list
-    fallback_models_column = ft.Column(
-        spacing=5,
-        scroll=ft.ScrollMode.AUTO,
-        height=150,
-    )
-
-    # Selected primary model
-    selected_model = {"value": config.OPENROUTER_MODEL if config.OPENROUTER_MODEL else ""}
-    
-    # Available models cache
-    available_models = {"data": []}
-    
-    # Loading indicator
-    loading_text = ft.Text("", color=config.COLORS["text"], size=12)
-
-    # Initialize fallback models from config
-    def initialize_fallback_models():
-        """Initialize fallback models from configuration."""
-        if hasattr(config, "FALLBACK_MODELS") and config.FALLBACK_MODELS:
-            for model_name in config.FALLBACK_MODELS:
-                if not model_name:
-                    continue
-                fallback_tile = ft.Container(
-                    content=ft.Row(
-                        [
-                            ft.Text(model_name, size=12, expand=True),
-                            ft.IconButton(
-                                icon=ft.Icons.DELETE,
-                                icon_size=16,
-                                on_click=lambda e: None,  # Will be set correctly below
-                            ),
-                        ]
-                    ),
-                    data=model_name,
-                    bgcolor=config.COLORS["secondary"],
-                    padding=5,
-                    border_radius=5,
-                )
-                fallback_tile.controls[0].controls[1].on_click = lambda e, c=fallback_tile: remove_fallback(c)
-                fallback_models_column.controls.append(fallback_tile)
-
-    def fetch_models_async():
-        """Fetch models from OpenRouter API."""
-        try:
-            loading_text.value = "モデルを取得中..."
-            page.update()
-            
-            api_key = api_key_field.value.strip() if api_key_field.value else ""
-            api = OpenRouterAPI(api_key if api_key else None)
-            models = api.fetch_models()
-            available_models["data"] = models
-            
-            loading_text.value = f"{len(models)}個のモデルが利用可能"
-            update_model_list("")
-            page.update()
-            
-        except Exception as e:
-            loading_text.value = f"エラー: {str(e)}"
-            logger.error(f"Failed to fetch models: {e}")
-            page.update()
-
-    def update_model_list(search_term: str):
-        """Update the model list based on search term."""
-        model_listview.controls.clear()
-        
-        if not available_models["data"]:
-            model_listview.controls.append(
-                ft.Text("モデルを取得してください", color=config.COLORS["text"])
-            )
-            page.update()
-            return
-        
-        api = OpenRouterAPI()
-        filtered_models = api.search_models(available_models["data"], search_term)
-        
-        if not filtered_models:
-            model_listview.controls.append(
-                ft.Text("検索結果なし", color=config.COLORS["text"])
-            )
-            page.update()
-            return
-        
-        for model in filtered_models[:50]:  # Limit to 50 results
-            model_id = model.get("id", "")
-            model_name = model.get("name", "Unknown")
-            pricing = model.get("pricing", {})
-            is_free = str(pricing.get("prompt", "0")) == "0" and str(pricing.get("completion", "0")) == "0"
-            
-            # Create model tile
-            tile = ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Column(
-                            [
-                                ft.Text(model_name, weight=ft.FontWeight.BOLD, size=14),
-                                ft.Text(model_id, size=11, color=config.COLORS["accent"]),
-                                ft.Text("無料" if is_free else "有料", size=10, 
-                                       color=config.COLORS["primary"] if is_free else config.COLORS["error"]),
-                            ],
-                            spacing=2,
-                            expand=True,
-                        ),
-                        ft.IconButton(
-                            icon=ft.Icons.CHECK_CIRCLE if model_id == selected_model["value"] else ft.Icons.CIRCLE_OUTLINED,
-                            icon_color=config.COLORS["primary"] if model_id == selected_model["value"] else config.COLORS["accent"],
-                            on_click=lambda e, mid=model_id: select_model(mid),
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                ),
-                bgcolor=config.COLORS["card"],
-                padding=10,
-                border_radius=5,
-            )
-            model_listview.controls.append(tile)
-        
-        page.update()
-
-    def select_model(model_id: str):
-        """Select a model as primary."""
-        selected_model["value"] = model_id
-        update_model_list(model_search_field.value or "")
-
-    def on_search_change(e):
-        """Handle search field change."""
-        update_model_list(e.control.value or "")
-
-    def add_fallback_model():
-        """Add currently selected model to fallback list."""
-        if selected_model["value"] and selected_model["value"] not in [c.data for c in fallback_models_column.controls]:
-            fallback_tile = ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Text(selected_model["value"], size=12, expand=True),
-                        ft.IconButton(
-                            icon=ft.Icons.DELETE,
-                            icon_size=16,
-                            on_click=lambda e: None,  # Placeholder, will be set below
-                        ),
-                    ]
-                ),
-                data=selected_model["value"],
-                bgcolor=config.COLORS["secondary"],
-                padding=5,
-                border_radius=5,
-            )
-            fallback_tile.controls[0].controls[1].on_click = lambda e, c=fallback_tile: remove_fallback(c)
-            fallback_models_column.controls.append(fallback_tile)
-            page.update()
-
-    def remove_fallback(container):
-        """Remove a fallback model."""
-        if container in fallback_models_column.controls:
-            fallback_models_column.controls.remove(container)
-            page.update()
 
     def save_settings(e):
-        """Save settings and close dialog."""
-        # Save API key (in memory only)
-        api_key = api_key_field.value.strip() if api_key_field.value else ""
-        if not api_key:
-            show_error_dialog(page, "エラー", "APIキーを入力してください")
+        url = url_field.value.strip() if url_field.value else ""
+        model = model_field.value.strip() if model_field.value else ""
+        if not url:
+            show_error_dialog(page, "エラー", "サーバー URL を入力してください")
             return
-        
-        if not selected_model["value"]:
-            show_error_dialog(page, "エラー", "モデルを選択してください")
+        if not model:
+            show_error_dialog(page, "エラー", "モデル名を入力してください")
             return
-        
-        # Check if API key changed
-        api_key_changed = config.OPENROUTER_API_KEY != api_key
-        
-        config.OPENROUTER_API_KEY = api_key
-        config.OPENROUTER_MODEL = selected_model["value"]
-        
-        # Save fallback models
-        fallback_list = [c.data for c in fallback_models_column.controls]
-        config.FALLBACK_MODELS = fallback_list
-        
-        # Reset client cache if API key changed
-        if api_key_changed:
-            from ..core.translator import reset_openrouter_client
-            reset_openrouter_client()
-        
-        dialog.open = False
-        page.update()
-        
-        # Call callback
+        url_changed = config.OLLAMA_BASE_URL != url
+        config.OLLAMA_BASE_URL = url
+        config.OLLAMA_MODEL = model
+        config.save()
+        if url_changed:
+            reset_ollama_client()
+        page.pop_dialog()
         on_save()
 
     def close_dialog(e):
-        """Close the dialog."""
-        dialog.open = False
-        page.update()
+        page.pop_dialog()
 
-    # Connect event handlers
-    model_search_field.on_change = on_search_change
-
-    # Create dialog content
     content = ft.Column(
         [
-            api_key_field,
-            ft.Row(
-                [
-                    ft.ElevatedButton(
-                        "モデルを取得",
-                        on_click=lambda e: fetch_models_async(),
-                        icon=ft.Icons.DOWNLOAD,
-                    ),
-                    loading_text,
-                ],
-                spacing=10,
-            ),
-            ft.Divider(),
-            model_search_field,
-            ft.Text("利用可能なモデル:", weight=ft.FontWeight.BOLD),
-            model_listview,
-            ft.Divider(),
-            ft.Row(
-                [
-                    ft.Text("フォールバックモデル:", weight=ft.FontWeight.BOLD),
-                    ft.IconButton(
-                        icon=ft.Icons.ADD,
-                        on_click=lambda e: add_fallback_model(),
-                        tooltip="選択中のモデルをフォールバックに追加",
-                    ),
-                ],
-            ),
-            fallback_models_column,
+            url_field,
+            model_field,
             ft.Text(
-                "※ フォールバックモデルはレート制限時に順番に試行されます",
-                size=10,
+                "※ Ollamaが起動していること、モデルがダウンロード済みであることを確認してください。",
+                size=11,
                 color=config.COLORS["accent"],
             ),
         ],
-        width=550,
-        scroll=ft.ScrollMode.AUTO,
+        width=450,
+        spacing=16,
     )
 
-    # Create dialog
     dialog = ft.AlertDialog(
-        title=ft.Text("OpenRouter設定"),
+        title=ft.Text("Ollama 設定"),
         content=content,
         actions=[
             ft.TextButton("キャンセル", on_click=close_dialog),
@@ -921,11 +712,115 @@ def show_openrouter_settings_dialog(page: ft.Page, on_save: Callable) -> None:
         actions_alignment=ft.MainAxisAlignment.END,
         modal=True,
     )
+    page.show_dialog(dialog)
 
-    # Initialize fallback models from config
-    initialize_fallback_models()
 
-    # Show dialog
-    page.dialog = dialog
-    dialog.open = True
-    page.update()
+def show_ollama_not_found_dialog(page: ft.Page) -> None:
+    """Show a dialog when Ollama server is not reachable.
+
+    Args:
+        page: The page to show the dialog on.
+    """
+    import webbrowser
+
+    def open_ollama_site(e):
+        webbrowser.open("https://ollama.com/download")
+        page.pop_dialog()
+
+    def close_dialog(e):
+        page.pop_dialog()
+
+    content = ft.Column(
+        [
+            ft.Text(
+                "Ollamaがインストールされていないか、起動していません。",
+                size=14,
+            ),
+            ft.Text(
+                "以下の手順で Ollama をセットアップしてください：",
+                size=13,
+                color=config.COLORS["accent"],
+            ),
+            ft.Text("1. https://ollama.com からインストーラーをダウンロード", size=12),
+            ft.Text("2. インストール後、Ollama を起動する", size=12),
+            ft.Text("3. 再度翻訳を実行する", size=12),
+        ],
+        spacing=8,
+        width=420,
+    )
+
+    dialog = ft.AlertDialog(
+        title=ft.Text("Ollama が見つかりません"),
+        content=content,
+        actions=[
+            ft.TextButton("OK", on_click=close_dialog),
+            ft.ElevatedButton(
+                "ollama.com を開く",
+                on_click=open_ollama_site,
+                icon=ft.Icons.OPEN_IN_BROWSER,
+            ),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+        modal=True,
+    )
+    page.show_dialog(dialog)
+
+
+def show_model_not_found_dialog(page: ft.Page, model_name: str) -> None:
+    """Show a dialog when the configured model is not downloaded.
+
+    Args:
+        page: The page to show the dialog on.
+        model_name: The model name that is missing.
+    """
+    pull_command = f"ollama pull {model_name}"
+
+    def copy_command(e):
+        pyperclip.copy(pull_command)
+
+    def close_dialog(e):
+        page.pop_dialog()
+
+    content = ft.Column(
+        [
+            ft.Text(
+                f'翻訳モデル "{model_name}" がダウンロードされていません。',
+                size=14,
+            ),
+            ft.Text(
+                "ターミナルで以下のコマンドを実行してダウンロードしてください：",
+                size=13,
+                color=config.COLORS["accent"],
+            ),
+            ft.Container(
+                content=ft.Text(
+                    pull_command,
+                    size=13,
+                    font_family="monospace",
+                    selectable=True,
+                ),
+                bgcolor=config.COLORS["card"],
+                padding=10,
+                border_radius=6,
+            ),
+            ft.Text("ダウンロード完了後、再度翻訳を実行してください。", size=12),
+        ],
+        spacing=10,
+        width=420,
+    )
+
+    dialog = ft.AlertDialog(
+        title=ft.Text("モデルが見つかりません"),
+        content=content,
+        actions=[
+            ft.TextButton("OK", on_click=close_dialog),
+            ft.ElevatedButton(
+                "コマンドをコピー",
+                on_click=copy_command,
+                icon=ft.Icons.COPY,
+            ),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+        modal=True,
+    )
+    page.show_dialog(dialog)
