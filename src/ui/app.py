@@ -172,6 +172,10 @@ class MinecraftModTranslatorApp:
         # Update the page
         page.update()
 
+        # Show dialog if config file was corrupted on startup
+        if config.config_corrupted:
+            self._show_corrupted_config_dialog(page)
+
     def _set_window_icon(self, page: ft.Page) -> None:
         """
         Set the window icon.
@@ -246,6 +250,36 @@ class MinecraftModTranslatorApp:
             )
 
         components.show_ollama_settings_dialog(page, on_settings_saved)
+
+    def _show_corrupted_config_dialog(self, page: ft.Page) -> None:
+        """Show a dialog when ollama_config.json is corrupted.
+
+        Args:
+            page: The page to show the dialog on.
+        """
+        def recreate(e):
+            page.pop_dialog()
+            config.save()
+            config.load()
+            logger.info("Recreated corrupted ollama_config.json with defaults")
+
+        def cancel(e):
+            page.pop_dialog()
+
+        dialog = ft.AlertDialog(
+            title=ft.Text("設定ファイルのエラー"),
+            content=ft.Text(
+                "設定ファイル (ollama_config.json) が壊れています。\n"
+                "新しく作成しますか？（デフォルト値に戻ります）"
+            ),
+            actions=[
+                ft.TextButton("キャンセル", on_click=cancel),
+                ft.ElevatedButton("新規作成", on_click=recreate),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+            modal=True,
+        )
+        page.show_dialog(dialog)
 
     def _handle_window_resize(self, e, page: ft.Page) -> None:
         """Handle window resize event.
