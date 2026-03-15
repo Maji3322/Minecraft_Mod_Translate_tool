@@ -1,0 +1,5 @@
+- Project: Minecraft Mod Translate Tool
+- Purpose: Python desktop GUI app that translates Minecraft Java Edition mod language files into Japanese using OpenRouter LLM APIs and produces a resource pack.
+- Tech stack: Python 3.11+, Flet desktop GUI, OpenRouter API, Nuitka for Windows executable builds.
+- Structure: `main.py` is the root entrypoint and delegates to `src.main:main`. Code is organized under `src/ui`, `src/core`, and `src/utils`. Resources live under `resources/`. GitHub Actions workflow for release build is under `.github/workflows/main.yml`.
+- Current packaging/dependency state: repository currently has `requirements.txt` and `uv.lock`, but no `pyproject.toml` file in the working tree. However, CI docs and workflow still reference `pyproject.toml`, and app version lookup in `src/utils/config.py` also expects it.
