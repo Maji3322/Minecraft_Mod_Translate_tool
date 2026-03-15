@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(C:/Users/kazuy/Desktop/Python_Projects/mod-translating-tool/.venv/Scripts/python.exe -m pytest C:/Users/kazuy/Desktop/Python_Projects/mod-translating-tool/tests/test_config.py::ConfigFilePathTests -v 2>&1)",
+      "Bash(C:/Users/kazuy/Desktop/Python_Projects/mod-translating-tool/.venv/Scripts/python.exe -m pytest C:/Users/kazuy/Desktop/Python_Projects/mod-translating-tool/tests/test_config.py::ConfigLoadTests -v 2>&1)",
+      "Bash(C:/Users/kazuy/Desktop/Python_Projects/mod-translating-tool/.venv/Scripts/python.exe -m pytest C:/Users/kazuy/Desktop/Python_Projects/mod-translating-tool/tests/test_config.py -v 2>&1)"
+    ]
+  }
+}
