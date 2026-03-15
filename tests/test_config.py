@@ -42,3 +42,33 @@ class ConfigFilePathTests(unittest.TestCase):
         # tests/test_config.py → parent = tests/ → parent = project root
         expected = Path(__file__).parent.parent / 'ollama_config.json'
         self.assertEqual(path, expected)
+
+
+class ConfigSaveTests(unittest.TestCase):
+    """Tests for Config.save()."""
+
+    def test_save_writes_url_and_model(self):
+        """save() writes current URL and model to JSON file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'ollama_config.json'
+            # Patch before Config() so __init__'s load() also uses the temp path
+            with patch.object(Config, '_config_file_path', lambda self=None: config_path):
+                cfg = Config()
+                cfg.OLLAMA_BASE_URL = 'http://example.com:11434'
+                cfg.OLLAMA_MODEL = 'my-model'
+                cfg.save()
+
+            data = json.loads(config_path.read_text(encoding='utf-8'))
+
+        self.assertEqual(data['ollama_base_url'], 'http://example.com:11434')
+        self.assertEqual(data['ollama_model'], 'my-model')
+
+    def test_save_does_not_raise_on_write_error(self):
+        """save() logs a warning but does not raise if write fails."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'ollama_config.json'
+            with patch.object(Config, '_config_file_path', lambda self=None: config_path):
+                cfg = Config()
+            # Now point to an unwritable location
+            with patch.object(Config, '_config_file_path', lambda self=None: Path('/nonexistent/dir/config.json')):
+                cfg.save()  # Should not raise

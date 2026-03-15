@@ -132,6 +132,20 @@ class Config:
         """Set the Ollama model name."""
         self._ollama_model = value
 
+    def save(self) -> None:
+        """Write current Ollama settings to ollama_config.json."""
+        path = self._config_file_path()
+        try:
+            data = {
+                'ollama_base_url': self._ollama_base_url,
+                'ollama_model': self._ollama_model,
+            }
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+            logger.info(f"Saved Ollama config to {path}")
+        except Exception as e:
+            logger.warning(f"Failed to save Ollama config to {path}: {e}")
+
 
 # Global config instance
 config = Config()
