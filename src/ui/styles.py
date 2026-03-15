@@ -70,7 +70,7 @@ def create_app_bar(
                         ft.IconButton(
                             ft.Icons.SETTINGS,
                             icon_color=COLORS["primary"],
-                            tooltip="OpenRouter設定",
+                            tooltip="Ollama設定",
                             on_click=on_settings_click,
                         ),
                         ft.IconButton(

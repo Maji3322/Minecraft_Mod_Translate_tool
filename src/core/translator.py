@@ -3,6 +3,7 @@
 import json
 import logging
 import random
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
@@ -20,6 +21,8 @@ T = TypeVar("T")
 
 # Shared Ollama client instance for connection pooling
 _ollama_client: Optional[OpenAI] = None
+_client_lock = threading.Lock()
+_ui_lock = threading.Lock()
 
 # Translation prompt constants
 TRANSLATION_SYSTEM_PROMPT = (
@@ -40,14 +43,14 @@ def get_ollama_client() -> OpenAI:
     """
     global _ollama_client
 
-    if _ollama_client is None:
-        _ollama_client = OpenAI(
-            base_url=f"{config.OLLAMA_BASE_URL}/v1",
-            api_key="ollama",
-        )
-        logger.info(f"Created Ollama client at {config.OLLAMA_BASE_URL}, model: {config.OLLAMA_MODEL}")
-
-    return _ollama_client
+    with _client_lock:
+        if _ollama_client is None:
+            _ollama_client = OpenAI(
+                base_url=f"{config.OLLAMA_BASE_URL}/v1",
+                api_key="ollama",
+            )
+            logger.info(f"Created Ollama client at {config.OLLAMA_BASE_URL}, model: {config.OLLAMA_MODEL}")
+        return _ollama_client
 
 
 def reset_ollama_client() -> None:
@@ -56,7 +59,8 @@ def reset_ollama_client() -> None:
     Call this when the Ollama base URL changes.
     """
     global _ollama_client
-    _ollama_client = None
+    with _client_lock:
+        _ollama_client = None
     logger.info("Reset Ollama client cache")
 
 
@@ -336,14 +340,15 @@ def _translate_and_update_progress(
         if page and progressbar and info_msg:
             from ..ui.components import update_progress_bar
 
-            update_progress_bar(
-                progressbar,
-                translated_count,
-                total_count,
-                info_msg,
-                page,
-                start_time,
-            )
+            with _ui_lock:
+                update_progress_bar(
+                    progressbar,
+                    translated_count,
+                    total_count,
+                    info_msg,
+                    page,
+                    start_time,
+                )
 
         pbar.update(1)
         return result, translated_count
@@ -427,8 +432,9 @@ def _finalize_progress(page, info_msg, translated_count: int, total_count: int) 
         total_count: Total strings.
     """
     if page and info_msg:
-        info_msg.value = f"完了：{translated_count}/{total_count}箇所を翻訳しました。"
-        page.update()
+        with _ui_lock:
+            info_msg.value = f"完了：{translated_count}/{total_count}箇所を翻訳しました。"
+            page.update()
 
 def translate_all_files(lang_file_paths: List[str], page=None) -> bool:
     """Translate all language files in parallel.

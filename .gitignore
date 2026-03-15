@@ -22,5 +22,4 @@ dist
 build/
 test_translation.py
 list_free_models.py
-test_openrouter_features.py
 logs_test/
