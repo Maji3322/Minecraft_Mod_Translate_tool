@@ -89,20 +89,17 @@ jobs:
                   restore-keys: |
                       ${{ runner.os }}-nuitka-ccache-
 
-            - name: Install dependencies with uv
+            - name: Install dependencies
               shell: bash
               run: |
                   python -m pip install --upgrade pip
-                  python -m pip install uv
-                  uv venv .venv
-                  uv pip sync --python .venv/Scripts/python requirements.txt
-                  echo "$GITHUB_WORKSPACE/.venv/Scripts" >> $GITHUB_PATH
+                  pip install -r requirements.txt
 
             - name: Install ccache (choco)
               shell: bash
               run: |
                   choco install ccache -y
-                  echo "export NUITKA_CCACHE_BINARY=$(which ccache)" >> $GITHUB_ENV
+                  echo "NUITKA_CCACHE_BINARY=$(which ccache)" >> $GITHUB_ENV
 
             - name: Compile with Nuitka
               uses: Nuitka/Nuitka-Action@main
