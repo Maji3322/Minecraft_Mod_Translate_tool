@@ -5,14 +5,20 @@
 ---
 - module-name: 'flet_desktop'
   data-files:
-    - dirs:
-        - 'app'
-    - patterns:
-        - 'app/flet/*.exe'
-      dest_path: 'app/flet'
-      executable: 'yes'
-      when: 'win32'
+    dirs:
+      - 'app'
   dlls:
+    # Nuitka treats Windows executables like DLLs and requires the
+    # executable flag for them to be preserved in standalone/onefile builds.
+    - from_filenames:
+        relative_path: 'app/flet'
+        prefixes:
+          - ''
+        suffixes:
+          - 'exe'
+        executable: 'yes'
+      dest_path: 'app/flet'
+      when: 'win32'
     - from_filenames:
         relative_path: 'app/flet'
         prefixes:
