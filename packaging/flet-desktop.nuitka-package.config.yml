@@ -5,8 +5,8 @@
 ---
 - module-name: 'flet_desktop'
   data-files:
-    dirs:
-      - 'app'
+    - dirs:
+        - 'app'
   dlls:
     - from_filenames:
         relative_path: 'app/flet'
@@ -21,5 +21,5 @@
           - ''
         suffixes:
           - 'exe'
-        executable: 'yes'
+      executable: 'yes'
       when: 'win32'

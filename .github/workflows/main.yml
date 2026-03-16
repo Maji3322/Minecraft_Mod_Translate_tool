@@ -6,6 +6,9 @@ on:
         tags:
             - "v*"
 
+env:
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
     contents: write
 
@@ -17,7 +20,7 @@ jobs:
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: Extract version from tag
               id: get_version
@@ -77,9 +80,11 @@ jobs:
                   grep '^__version__ = ' src/__init__.py
 
             - name: Set up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
               with:
                   python-version: "3.11"
+                  cache: "pip"
+                  cache-dependency-path: "requirements.txt"
 
             - name: Prepare cache directories
               shell: bash
@@ -87,7 +92,7 @@ jobs:
                   mkdir -p "$CCACHE_DIR"
 
             - name: Cache ccache
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: ${{ env.CCACHE_DIR }}
                   key: ${{ runner.os }}-ccache-${{ hashFiles('requirements.txt') }}
