@@ -120,13 +120,14 @@ jobs:
             - name: Compile with Nuitka
               shell: bash
               run: |
+                  FLET_DESKTOP_DIR=$(python -c "from pathlib import Path; import flet_desktop; print(Path(flet_desktop.__file__).parent.as_posix())")
                   python -m nuitka \
                     --mode=onefile \
                     --windows-console-mode=disable \
                     --windows-icon-from-ico=resources/icon.ico \
                     --include-data-dir=resources=resources \
                     --include-package=flet_desktop \
-                    --user-package-configuration-file=packaging/flet-desktop.nuitka-package.config.yml \
+                    --include-data-dir="${FLET_DESKTOP_DIR}/app=flet_desktop/app" \
                     --output-dir=dist \
                     --assume-yes-for-downloads \
                     main.py

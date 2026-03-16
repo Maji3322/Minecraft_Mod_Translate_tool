@@ -3,27 +3,8 @@
 # yamllint disable rule:indentation
 # yamllint disable rule:comments-indentation
 ---
+# NOTE: This file is kept for reference only.
+# The flet_desktop/app directory (containing flet.exe and DLLs) is included
+# directly via --include-data-dir in the CI workflow, which is more reliable
+# than the dlls/from_filenames approach for pre-bundled Flutter executables.
 - module-name: "flet_desktop"
-  data-files:
-    - dirs:
-        - "app"
-  dlls:
-    # Nuitka treats Windows executables like DLLs and requires the
-    # executable flag for them to be preserved in standalone/onefile builds.
-    - from_filenames:
-        relative_path: "app/flet"
-        prefixes:
-          - ""
-        suffixes:
-          - "exe"
-        executable: "yes"
-      dest_path: "app/flet"
-      when: "win32"
-    - from_filenames:
-        relative_path: "app/flet"
-        prefixes:
-          - ""
-        suffixes:
-          - "dll"
-      dest_path: "app/flet"
-      when: "win32"
