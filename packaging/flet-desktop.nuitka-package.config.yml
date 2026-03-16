@@ -7,6 +7,11 @@
   data-files:
     - dirs:
         - 'app'
+    - patterns:
+        - 'app/flet/*.exe'
+      dest_path: 'app/flet'
+      executable: 'yes'
+      when: 'win32'
   dlls:
     - from_filenames:
         relative_path: 'app/flet'
@@ -14,12 +19,5 @@
           - ''
         suffixes:
           - 'dll'
-      when: 'win32'
-    - from_filenames:
-        relative_path: 'app/flet'
-        prefixes:
-          - ''
-        suffixes:
-          - 'exe'
-      executable: 'yes'
+      dest_path: 'app/flet'
       when: 'win32'
