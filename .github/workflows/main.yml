@@ -109,6 +109,8 @@ jobs:
                   windows-console-mode: disable
                   windows-icon-from-ico: "resources/icon.ico"
                   include-data-dir: "resources=resources"
+                  include-package: "flet_desktop"
+                  include-package-data: "flet_desktop"
                   output-dir: "dist"
 
             - name: Rename executable to include version

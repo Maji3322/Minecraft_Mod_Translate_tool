@@ -4,6 +4,7 @@ import os
 import sys
 
 import flet as ft
+import flet_desktop  # noqa: F401  # Keep desktop runtime visible to frozen builds.
 from flet import AppView
 
 from .ui.app import start_app
