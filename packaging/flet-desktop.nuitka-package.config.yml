@@ -1,0 +1,24 @@
+# yamllint disable rule:line-length
+# yamllint disable rule:indentation
+# yamllint disable rule:comments-indentation
+---
+- module-name: 'flet_desktop'
+  data-files:
+    dirs:
+      - 'app'
+  dlls:
+    - from_filenames:
+        relative_path: 'app/flet'
+        prefixes:
+          - ''
+        suffixes:
+          - 'dll'
+      when: 'win32'
+    - from_filenames:
+        relative_path: 'app/flet'
+        prefixes:
+          - ''
+        suffixes:
+          - 'exe'
+        executable: 'yes'
+      when: 'win32'

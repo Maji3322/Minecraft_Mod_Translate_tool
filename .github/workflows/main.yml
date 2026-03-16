@@ -14,7 +14,6 @@ jobs:
         runs-on: windows-latest
         env:
             CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
-            NUITKA_CACHE_DIR: ${{ github.workspace }}/.cache/nuitka
 
         steps:
             - name: Checkout repository
@@ -85,17 +84,15 @@ jobs:
             - name: Prepare cache directories
               shell: bash
               run: |
-                  mkdir -p "$CCACHE_DIR" "$NUITKA_CACHE_DIR"
+                  mkdir -p "$CCACHE_DIR"
 
-            - name: Cache Nuitka and ccache
+            - name: Cache ccache
               uses: actions/cache@v4
               with:
-                  path: |
-                      ${{ env.CCACHE_DIR }}
-                      ${{ env.NUITKA_CACHE_DIR }}
-                  key: ${{ runner.os }}-nuitka-ccache-${{ hashFiles('requirements.txt') }}
+                  path: ${{ env.CCACHE_DIR }}
+                  key: ${{ runner.os }}-ccache-${{ hashFiles('requirements.txt') }}
                   restore-keys: |
-                      ${{ runner.os }}-nuitka-ccache-
+                      ${{ runner.os }}-ccache-
 
             - name: Install dependencies
               shell: bash
@@ -116,11 +113,9 @@ jobs:
                   mode: onefile
                   windows-console-mode: disable
                   windows-icon-from-ico: "resources/icon.ico"
-                  include-data-dir: |
-                    resources=resources
-                    flet_desktop/app=flet_desktop/app
+                  include-data-dir: "resources=resources"
                   include-package: "flet_desktop"
-                  include-package-data: "flet_desktop"
+                  user-package-configuration-file: "packaging/flet-desktop.nuitka-package.config.yml"
                   output-dir: "dist"
 
             - name: Rename executable to include version
