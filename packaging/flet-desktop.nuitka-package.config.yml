@@ -10,7 +10,6 @@
     - patterns:
         - 'app/flet/*.exe'
       dest_path: 'app/flet'
-      executable: 'yes'
       when: 'win32'
   dlls:
     - from_filenames:
