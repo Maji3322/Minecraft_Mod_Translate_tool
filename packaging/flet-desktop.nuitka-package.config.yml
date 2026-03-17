@@ -5,6 +5,6 @@
 ---
 # NOTE: This file is kept for reference only.
 # The flet_desktop/app directory (containing flet.exe and DLLs) is included
-# directly via --include-data-dir in the CI workflow, which is more reliable
+# directly via --include-raw-dir in the CI workflow, which is more reliable
 # than the dlls/from_filenames approach for pre-bundled Flutter executables.
 - module-name: "flet_desktop"
