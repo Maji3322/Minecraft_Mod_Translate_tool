@@ -18,6 +18,25 @@ logger = logging.getLogger(__name__)
 PROGRESS_CONTAINER_KEY = "progress_container"
 LOADING_CONTAINER_KEY = "loading_container"
 
+# Ollama status states
+OLLAMA_STATUS_CHECKING = "checking"
+OLLAMA_STATUS_OK = "ok"
+OLLAMA_STATUS_NO_MODEL = "no_model"
+OLLAMA_STATUS_ERROR = "error"
+
+_STATUS_COLORS = {
+    OLLAMA_STATUS_CHECKING: "#9E9E9E",
+    OLLAMA_STATUS_OK: "#4CAF50",
+    OLLAMA_STATUS_NO_MODEL: "#FF9800",
+    OLLAMA_STATUS_ERROR: "#F44336",
+}
+_STATUS_LABELS = {
+    OLLAMA_STATUS_CHECKING: "確認中...",
+    OLLAMA_STATUS_OK: "Ollama 接続済",
+    OLLAMA_STATUS_NO_MODEL: "モデル未取得",
+    OLLAMA_STATUS_ERROR: "Ollama 未接続",
+}
+
 # UI text constants
 TEXT_EXTRACTION_CARD = "MODファイルの解凍"
 TEXT_TRANSLATING = "翻訳中..."
@@ -37,6 +56,57 @@ WINDOW_HEIGHT_OFFSET = 150
 PROGRESS_BAR_WIDTH = 300
 LOADING_RING_SIZE = 50
 LOADING_RING_STROKE = 4
+
+
+def create_ollama_status_indicator() -> tuple[ft.Container, ft.Container, ft.Text]:
+    """Create a compact Ollama connection status indicator for the AppBar.
+
+    Returns:
+        Tuple of (outer_container, dot_container, status_text).
+    """
+    dot = ft.Container(
+        width=10,
+        height=10,
+        border_radius=5,
+        bgcolor=_STATUS_COLORS[OLLAMA_STATUS_CHECKING],
+    )
+    status_text = ft.Text(
+        _STATUS_LABELS[OLLAMA_STATUS_CHECKING],
+        size=12,
+        color=config.COLORS["text"],
+    )
+    container = ft.Container(
+        content=ft.Row(
+            controls=[dot, status_text],
+            spacing=6,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        padding=ft.padding.symmetric(horizontal=10, vertical=4),
+        border_radius=6,
+        bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
+        margin=ft.margin.only(right=4),
+        tooltip=config.OLLAMA_BASE_URL,
+    )
+    return container, dot, status_text
+
+
+def update_ollama_status_indicator(
+    dot: ft.Container,
+    status_text: ft.Text,
+    state: str,
+    page: ft.Page,
+) -> None:
+    """Update the Ollama status indicator.
+
+    Args:
+        dot: The colored dot container.
+        status_text: The label text.
+        state: One of OLLAMA_STATUS_* constants.
+        page: The page to update.
+    """
+    dot.bgcolor = _STATUS_COLORS.get(state, _STATUS_COLORS[OLLAMA_STATUS_CHECKING])
+    status_text.value = _STATUS_LABELS.get(state, _STATUS_LABELS[OLLAMA_STATUS_CHECKING])
+    page.update()
 
 
 def initialize_page_data(page: ft.Page) -> None:

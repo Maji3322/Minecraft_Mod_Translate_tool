@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import random
 import threading
 import time
@@ -72,10 +73,16 @@ def check_ollama_availability() -> tuple[bool, bool]:
     """
     from .ollama_api import check_ollama_running, check_model_downloaded
 
+    logger.info(f"Checking Ollama availability at {config.OLLAMA_BASE_URL} (model: {config.OLLAMA_MODEL})")
     is_running, tags_data = check_ollama_running(config.OLLAMA_BASE_URL)
     if not is_running or tags_data is None:
+        logger.warning(f"Ollama is not running at {config.OLLAMA_BASE_URL}")
         return False, False
     model_ok = check_model_downloaded(tags_data, config.OLLAMA_MODEL)
+    if not model_ok:
+        logger.warning(f"Model '{config.OLLAMA_MODEL}' is not downloaded")
+    else:
+        logger.info(f"Ollama is running and model '{config.OLLAMA_MODEL}' is available")
     return True, model_ok
 
 
@@ -100,15 +107,18 @@ def retry_on_timeout(max_retries: int = 3, base_delay: int = 2) -> Callable:
                 except Exception as e:
                     retries += 1
                     if retries > max_retries:
-                        logger.error(f"Translation error (possible timeout): {e}")
+                        logger.error(
+                            f"Translation failed after {max_retries} retries: "
+                            f"{type(e).__name__}: {e}"
+                        )
                         raise TranslationError(
                             f"Failed after {max_retries} retries"
                         ) from e
 
                     delay = base_delay * (2 ** (retries - 1)) + random.uniform(0, 1)
                     logger.warning(
-                        f"Translation error. Retrying in {delay:.2f} seconds "
-                        f"(attempt {retries})..."
+                        f"Translation error ({type(e).__name__}: {e}). "
+                        f"Retrying in {delay:.2f}s (attempt {retries}/{max_retries})..."
                     )
                     time.sleep(delay)
 
@@ -141,7 +151,7 @@ def translate_text(client: OpenAI, text: str) -> str:
         raise TranslationError("No Ollama model configured")
 
     try:
-        logger.info(f"Translating with model: {model}")
+        logger.debug(f"Translating text ({len(text)} chars) with model: {model}")
         result = _perform_translation(client, text, model)
         return _clean_translation_result(result, text)
     except TranslationError:
@@ -210,9 +220,10 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
     try:
         client = get_ollama_client()
 
+        file_size = os.path.getsize(lang_file_path) if os.path.exists(lang_file_path) else 0
         logger.info(
-            f"Starting LLM translation of {lang_file_path} "
-            f"using model: {config.OLLAMA_MODEL}"
+            f"Starting translation: {lang_file_path} "
+            f"({file_size} bytes, model: {config.OLLAMA_MODEL})"
         )
 
         with open(lang_file_path, "r", encoding="utf-8") as f:
@@ -220,6 +231,7 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
 
         ja_json = {}
         total_strings = _count_translatable_strings(en_json)
+        logger.info(f"  -> {total_strings} strings to translate in {os.path.basename(lang_file_path)}")
 
         progressbar, info_msg = _setup_progress_tracking(page, lang_file_path)
         translated_strings = 0
@@ -258,7 +270,11 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
         _save_translated_json(lang_file_path, ja_json)
         _finalize_progress(page, info_msg, translated_strings, total_strings)
 
-        logger.info(f"Completed LLM translation of {lang_file_path}")
+        elapsed = time.time() - start_time
+        logger.info(
+            f"Completed translation: {os.path.basename(lang_file_path)} "
+            f"({translated_strings}/{total_strings} strings in {elapsed:.1f}s)"
+        )
         return True
 
     except (json.JSONDecodeError, IOError, TranslationError) as e:
@@ -453,19 +469,32 @@ def translate_all_files(lang_file_paths: List[str], page=None) -> bool:
         logger.info("No files to translate.")
         return True
 
+    logger.info(f"Starting parallel translation of {len(lang_file_paths)} file(s):")
+    for path in lang_file_paths:
+        logger.info(f"  - {os.path.basename(path)}")
+
+    batch_start = time.time()
     try:
         with ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(translate_json_file, path, page)
+            futures = {
+                executor.submit(translate_json_file, path, page): path
                 for path in lang_file_paths
-            ]
+            }
 
-            for future in futures:
+            failed = False
+            for future, path in futures.items():
                 if not future.result():
-                    logger.error("Translation failed for one or more files.")
-                    return False
+                    logger.error(f"Translation failed for: {os.path.basename(path)}")
+                    failed = True
 
-        logger.info("All translations completed successfully.")
+            if failed:
+                return False
+
+        elapsed = time.time() - batch_start
+        logger.info(
+            f"All {len(lang_file_paths)} file(s) translated successfully "
+            f"(total: {elapsed:.1f}s)"
+        )
         return True
 
     except Exception as e:

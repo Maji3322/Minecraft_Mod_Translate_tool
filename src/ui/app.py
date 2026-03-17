@@ -5,6 +5,7 @@ import glob
 import logging
 import os
 import sys
+import threading
 import time
 from typing import List
 
@@ -52,6 +53,8 @@ class MinecraftModTranslatorApp:
         self.selected_files_text = ft.Text("", color=config.COLORS["text"], size=14)
         self.file_names: List[str] = []
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._status_dot: ft.Container | None = None
+        self._status_text: ft.Text | None = None
 
     def initialize_ui(self, page: ft.Page) -> None:
         """Initialize the UI.
@@ -68,6 +71,11 @@ class MinecraftModTranslatorApp:
 
         self._set_window_icon(page)
 
+        # Create Ollama status indicator
+        status_container, self._status_dot, self._status_text = (
+            components.create_ollama_status_indicator()
+        )
+
         page.appbar = styles.create_app_bar(
             page,
             on_help_click=lambda e: components.show_dialog(
@@ -75,7 +83,13 @@ class MinecraftModTranslatorApp:
             ),
             on_github_click=lambda e: components.show_github_dialog(page),
             on_settings_click=lambda e: self._show_settings_dialog(page),
+            status_widget=status_container,
         )
+
+        # Check Ollama status in background on startup
+        threading.Thread(
+            target=self._check_ollama_status, args=(page,), daemon=True
+        ).start()
 
 
         # Create version dropdown
@@ -95,6 +109,9 @@ class MinecraftModTranslatorApp:
             )
             if files:
                 file_paths = [file.path for file in files if file.path]
+                logger.info(f"Files selected via picker: {len(file_paths)} file(s)")
+                for fp in file_paths:
+                    logger.debug(f"  Selected: {fp}")
                 if not file_paths:
                     self.selected_files_text.value = "有効なファイルが選択されませんでした。"
                     self.selected_files_text.update()
@@ -215,6 +232,10 @@ class MinecraftModTranslatorApp:
         if e.control.value:
             # Set pack format
             config.pack_format = config.get_pack_format_for_version(e.control.value)
+            logger.info(
+                f"Version selected: {e.control.value} "
+                f"(pack_format={config.pack_format})"
+            )
 
             # Show file selection buttons
             self.file_button.visible = True
@@ -230,6 +251,28 @@ class MinecraftModTranslatorApp:
 
             page.update()
 
+    def _check_ollama_status(self, page: ft.Page) -> None:
+        """Check Ollama availability and update the status indicator.
+
+        Args:
+            page: The page containing the status indicator.
+        """
+        if self._status_dot is None or self._status_text is None:
+            return
+
+        ollama_running, model_ok = translator.check_ollama_availability()
+
+        if not ollama_running:
+            state = components.OLLAMA_STATUS_ERROR
+        elif not model_ok:
+            state = components.OLLAMA_STATUS_NO_MODEL
+        else:
+            state = components.OLLAMA_STATUS_OK
+
+        components.update_ollama_status_indicator(
+            self._status_dot, self._status_text, state, page
+        )
+
     def _show_settings_dialog(self, page: ft.Page) -> None:
         """Show the Ollama settings dialog.
 
@@ -241,6 +284,17 @@ class MinecraftModTranslatorApp:
             """Callback when settings are saved."""
             translator.reset_ollama_client()
             logger.info("Ollama client reset after settings update")
+            # Reset indicator to "checking" then re-check in background
+            if self._status_dot and self._status_text:
+                components.update_ollama_status_indicator(
+                    self._status_dot,
+                    self._status_text,
+                    components.OLLAMA_STATUS_CHECKING,
+                    page,
+                )
+            threading.Thread(
+                target=self._check_ollama_status, args=(page,), daemon=True
+            ).start()
             components.show_dialog(
                 page,
                 "設定保存完了",
@@ -308,6 +362,11 @@ class MinecraftModTranslatorApp:
             file_names: List of file names
             page: The page
         """
+        process_start = time.time()
+        logger.info(
+            f"Processing {len(file_paths)} JAR file(s): "
+            + ", ".join(file_names)
+        )
         try:
             # Check Ollama availability before doing any work
             ollama_running, model_ok = translator.check_ollama_availability()
@@ -392,6 +451,11 @@ class MinecraftModTranslatorApp:
 
             # Translate language files
             if translator.translate_all_files(lang_files_to_translate, page):
+                elapsed = time.time() - process_start
+                logger.info(
+                    f"All processing completed in {elapsed:.1f}s "
+                    f"({len(lang_files_to_translate)} file(s) translated)"
+                )
                 components.show_dialog(page, "完了", "全ての翻訳が完了しました。")
                 self._finish_translation(page, len(lang_files_to_translate))
             else:
@@ -430,7 +494,9 @@ class MinecraftModTranslatorApp:
                 if path
             ]
 
-            logger.debug(f"Found {len(en_us_json_files)} en_us.json files")
+            logger.info(f"Found {len(en_us_json_files)} en_us.json file(s) in temp directory")
+            for f in en_us_json_files:
+                logger.debug(f"  en_us.json: {f}")
         except Exception as e:
             logger.error(f"Error finding language files: {e}", exc_info=True)
             raise FileOperationError("Failed to find language files") from e

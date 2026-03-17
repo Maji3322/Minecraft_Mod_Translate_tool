@@ -1,5 +1,7 @@
 """UI styles and themes for the application."""
 
+from typing import Optional
+
 import flet as ft
 from platform import system
 
@@ -35,7 +37,11 @@ def create_theme() -> ft.Theme:
 
 
 def create_app_bar(
-    page: ft.Page, on_help_click=None, on_github_click=None, on_settings_click=None
+    page: ft.Page,
+    on_help_click=None,
+    on_github_click=None,
+    on_settings_click=None,
+    status_widget: Optional[ft.Control] = None,
 ) -> ft.AppBar:
     """Create the application bar.
 
@@ -67,6 +73,7 @@ def create_app_bar(
             ft.Container(
                 content=ft.Row(
                     controls=[
+                        *([status_widget] if status_widget is not None else []),
                         ft.IconButton(
                             ft.Icons.SETTINGS,
                             icon_color=COLORS["primary"],
@@ -87,6 +94,7 @@ def create_app_bar(
                         ),
                     ],
                     spacing=0,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 padding=ft.padding.only(right=10),
             ),

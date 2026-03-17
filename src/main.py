@@ -16,6 +16,15 @@ def main():
     logger = setup_root_logger()
     logger.info("Starting Minecraft MOD Translator Tool")
 
+    # Log runtime environment
+    frozen = getattr(sys, "frozen", False)
+    exe_path = sys.executable
+    cwd = os.getcwd()
+    logger.info(f"Python: {sys.version}")
+    logger.info(f"Platform: {sys.platform}")
+    logger.info(f"Executable: {exe_path} ({'compiled' if frozen else 'script'})")
+    logger.info(f"Working directory: {cwd}")
+
     sys.excepthook = lambda exc_type, exc_value, exc_tb: logger.exception(
         "Uncaught exception", exc_info=(exc_type, exc_value, exc_tb)
     )

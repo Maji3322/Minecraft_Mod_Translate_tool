@@ -1,6 +1,7 @@
 """Ollama API integration for checking server status and available models."""
 
 import logging
+import time
 from typing import Optional
 
 import httpx
@@ -25,10 +26,22 @@ def check_ollama_running(base_url: str) -> tuple[bool, Optional[dict]]:
 
     for url in urls_to_try:
         try:
+            logger.info(f"Connecting to Ollama: GET {url}/api/tags")
+            t0 = time.time()
             response = httpx.get(f"{url}/api/tags", timeout=3)
+            elapsed_ms = (time.time() - t0) * 1000
             if response.status_code == 200:
-                return True, response.json()
-            logger.warning(f"Ollama at {url} returned status {response.status_code}")
+                data = response.json()
+                models = [m.get("name", "") for m in data.get("models", [])]
+                logger.info(
+                    f"Ollama responded in {elapsed_ms:.0f}ms. "
+                    f"Available models ({len(models)}): {models or '(none)'}"
+                )
+                return True, data
+            logger.warning(
+                f"Ollama at {url} returned HTTP {response.status_code} "
+                f"in {elapsed_ms:.0f}ms"
+            )
         except Exception as e:
             logger.warning(f"Ollama not reachable at {url}: {type(e).__name__}: {e}")
 
@@ -46,11 +59,16 @@ def check_model_downloaded(tags_data: dict, model_name: str) -> bool:
         True if the model is available locally.
     """
     models = tags_data.get("models", [])
-    for model in models:
-        name = model.get("name", "")
+    available_names = [m.get("name", "") for m in models]
+    for name in available_names:
         # Ollama model names can include tags like "mitmul/plamo-2-translate:latest"
         if name == model_name or name.startswith(f"{model_name}:"):
+            logger.info(f"Model '{model_name}' found: {name}")
             return True
+    logger.warning(
+        f"Model '{model_name}' not found. "
+        f"Available: {available_names or '(none)'}"
+    )
     return False
 
 

@@ -25,6 +25,9 @@ def setup_logger(
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
+    debug_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] %(message)s"
+    )
 
     console_handler = logging.StreamHandler()
     console_handler.setLevel(level)
@@ -38,12 +41,13 @@ def setup_logger(
 
         file_handler = logging.handlers.RotatingFileHandler(
             filename=log_file,
-            maxBytes=1024 * 1024,  # 1MB
-            backupCount=3,
+            maxBytes=1024 * 1024 * 5,  # 5MB
+            backupCount=5,
             encoding="utf-8",
         )
         file_handler.setLevel(level)
-        file_handler.setFormatter(formatter)
+        # Use debug formatter for file to include function/line info
+        file_handler.setFormatter(debug_formatter)
         logger.addHandler(file_handler)
 
     return logger
