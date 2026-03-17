@@ -39,7 +39,11 @@ class Config:
         In frozen (compiled) mode: next to the executable.
         In dev mode: at the project root (3 levels above this file).
         """
-        if getattr(sys, 'frozen', False):
+        # sys.frozen is set by PyInstaller; __compiled__ is set by Nuitka at module level.
+        # Both indicate a compiled executable where sys.executable is the exe itself.
+        is_compiled = getattr(sys, 'frozen', False) or bool(globals().get('__compiled__'))
+
+        if is_compiled:
             return Path(sys.executable).parent / 'ollama_config.json'
         return Path(__file__).parent.parent.parent / 'ollama_config.json'
 
@@ -159,7 +163,10 @@ class Config:
                 data = json.load(f)
             self._ollama_base_url = data.get('ollama_base_url', self.OLLAMA_DEFAULT_BASE_URL)
             self._ollama_model = data.get('ollama_model', self.OLLAMA_DEFAULT_MODEL)
-            logger.info(f"Loaded Ollama config from {path}")
+            logger.info(
+                f"Loaded Ollama config from {path}: "
+                f"url={self._ollama_base_url}, model={self._ollama_model}"
+            )
         except Exception as e:
             logger.warning(f"Failed to parse Ollama config at {path}: {e}")
             self._config_corrupted = True
@@ -174,7 +181,10 @@ class Config:
             }
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
-            logger.info(f"Saved Ollama config to {path}")
+            logger.info(
+                f"Saved Ollama config to {path}: "
+                f"url={self._ollama_base_url}, model={self._ollama_model}"
+            )
         except Exception as e:
             logger.warning(f"Failed to save Ollama config to {path}: {e}")
 

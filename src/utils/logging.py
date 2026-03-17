@@ -65,7 +65,13 @@ def setup_root_logger(log_dir: str = "logs") -> logging.Logger:
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    logger = setup_logger("mcmt", os.path.join(log_dir, "mcmt.log"))
+    # Configure the root logger so that all child loggers (src.*, etc.) propagate here.
+    logger = setup_logger("", os.path.join(log_dir, "mcmt.log"))
+
+    # Suppress verbose debug output from third-party libraries.
+    for lib in ("httpx", "httpcore", "openai", "hpack", "h2"):
+        logging.getLogger(lib).setLevel(logging.WARNING)
+
     logger.info("===== APPLICATION STARTED =====")
 
     return logger
