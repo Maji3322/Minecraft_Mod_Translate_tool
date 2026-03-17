@@ -44,13 +44,29 @@ def get_ollama_client() -> OpenAI:
     """
     global _ollama_client
 
+    from .ollama_api import resolve_ollama_base_url
+
     with _client_lock:
         if _ollama_client is None:
+            configured_base_url = config.OLLAMA_BASE_URL
+            effective_base_url = resolve_ollama_base_url(configured_base_url)
             _ollama_client = OpenAI(
-                base_url=f"{config.OLLAMA_BASE_URL}/v1",
+                base_url=f"{effective_base_url}/v1",
                 api_key="ollama",
             )
-            logger.info(f"Created Ollama client at {config.OLLAMA_BASE_URL}, model: {config.OLLAMA_MODEL}")
+            if effective_base_url != configured_base_url:
+                logger.info(
+                    "Created Ollama client with fallback URL %s (configured: %s), model: %s",
+                    effective_base_url,
+                    configured_base_url,
+                    config.OLLAMA_MODEL,
+                )
+            else:
+                logger.info(
+                    "Created Ollama client at %s, model: %s",
+                    configured_base_url,
+                    config.OLLAMA_MODEL,
+                )
         return _ollama_client
 
 
@@ -235,7 +251,7 @@ def translate_json_file(lang_file_path: str, page=None) -> bool:
 
         progressbar, info_msg = _setup_progress_tracking(page, lang_file_path)
         translated_strings = 0
-        pbar = tqdm(total=total_strings, position=0, leave=True)
+        pbar = tqdm(total=total_strings, position=0, leave=True, disable=sys.stderr is None)
 
         for key, value in en_json.items():
             if isinstance(value, str):

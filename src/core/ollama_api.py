@@ -9,6 +9,52 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
+def candidate_ollama_base_urls(base_url: str) -> list[str]:
+    """Return preferred Ollama base URLs to try for a configured endpoint.
+
+    On Windows, ``localhost`` may resolve to IPv6 (::1) while Ollama usually
+    listens on IPv4. Trying ``127.0.0.1`` as a fallback keeps status checks and
+    actual translation requests aligned.
+    """
+    normalized = base_url.rstrip("/")
+    urls = [normalized]
+
+    if "://localhost" in normalized:
+        urls.append(normalized.replace("://localhost", "://127.0.0.1", 1))
+
+    return list(dict.fromkeys(urls))
+
+
+def resolve_ollama_base_url(base_url: str) -> str:
+    """Return a reachable Ollama base URL, falling back to IPv4 localhost.
+
+    If none of the candidates respond, the original URL is returned so the
+    eventual translation error still reflects the configured endpoint.
+    """
+    original = base_url.rstrip("/")
+
+    for url in candidate_ollama_base_urls(base_url):
+        try:
+            response = httpx.get(f"{url}/api/tags", timeout=3)
+            if response.status_code == 200:
+                if url != original:
+                    logger.info(
+                        "Resolved Ollama base URL from %s to %s for runtime requests",
+                        original,
+                        url,
+                    )
+                return url
+        except Exception as e:
+            logger.debug(
+                "Ollama base URL candidate %s was not reachable during resolution: %s: %s",
+                url,
+                type(e).__name__,
+                e,
+            )
+
+    return original
+
+
 def check_ollama_running(base_url: str) -> tuple[bool, Optional[dict]]:
     """Check if Ollama server is running by querying /api/tags.
 
@@ -18,13 +64,7 @@ def check_ollama_running(base_url: str) -> tuple[bool, Optional[dict]]:
     Returns:
         Tuple of (is_running, tags_data). tags_data is None if not running.
     """
-    # On Windows, 'localhost' may resolve to IPv6 (::1) which Ollama doesn't
-    # listen on by default. Fall back to 127.0.0.1 if the primary URL fails.
-    urls_to_try = [base_url]
-    if "localhost" in base_url:
-        urls_to_try.append(base_url.replace("localhost", "127.0.0.1"))
-
-    for url in urls_to_try:
+    for url in candidate_ollama_base_urls(base_url):
         try:
             logger.info(f"Connecting to Ollama: GET {url}/api/tags")
             t0 = time.time()
