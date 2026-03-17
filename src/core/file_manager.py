@@ -50,10 +50,10 @@ def recursive_unzip_jar(jar_path: str) -> Optional[str]:
         FileOperationError: If the JAR file cannot be unzipped.
     """
     if not os.path.exists(jar_path):
-        logger.error(f"{jar_path} not found. Skipping.")
+        logger.error(f"{os.path.basename(jar_path)} not found. Skipping.")
         return None
 
-    logger.info(f"Unzipping {jar_path}")
+    logger.info(f"Unzipping {os.path.basename(jar_path)}")
 
     if not os.path.exists(config.TEMP_DIR):
         os.makedirs(config.TEMP_DIR)

@@ -10,10 +10,15 @@ class OllamaApiHelperTests(unittest.TestCase):
     """Regression tests for executable/runtime Ollama endpoint handling."""
 
     def test_candidate_urls_add_ipv4_fallback_for_localhost(self):
-        """localhost should produce an IPv4 fallback candidate."""
+        """127.0.0.1 must be first so DNS resolution of localhost is avoided.
+
+        On Windows, resolving "localhost" can trigger Wi-Fi scanning via the OS
+        network-location service and produce spurious location permission requests.
+        Placing the literal IPv4 loopback address first bypasses that lookup.
+        """
         self.assertEqual(
             candidate_ollama_base_urls("http://localhost:11434"),
-            ["http://localhost:11434", "http://127.0.0.1:11434"],
+            ["http://127.0.0.1:11434", "http://localhost:11434"],
         )
 
     def test_candidate_urls_leave_non_localhost_untouched(self):

@@ -111,7 +111,7 @@ class MinecraftModTranslatorApp:
                 file_paths = [file.path for file in files if file.path]
                 logger.info(f"Files selected via picker: {len(file_paths)} file(s)")
                 for fp in file_paths:
-                    logger.debug(f"  Selected: {fp}")
+                    logger.debug(f"  Selected: {os.path.basename(fp)}")
                 if not file_paths:
                     self.selected_files_text.value = "有効なファイルが選択されませんでした。"
                     self.selected_files_text.update()

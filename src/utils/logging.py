@@ -69,7 +69,7 @@ def setup_root_logger(log_dir: str = "logs") -> logging.Logger:
     logger = setup_logger("", os.path.join(log_dir, "mcmt.log"))
 
     # Suppress verbose debug output from third-party libraries.
-    for lib in ("httpx", "httpcore", "openai", "hpack", "h2"):
+    for lib in ("httpx", "httpcore", "openai", "hpack", "h2", "flet", "flet_core", "flet_web", "flet_runtime"):
         logging.getLogger(lib).setLevel(logging.WARNING)
 
     logger.info("===== APPLICATION STARTED =====")

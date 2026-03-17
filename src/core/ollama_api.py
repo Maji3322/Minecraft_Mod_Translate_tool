@@ -12,15 +12,23 @@ logger = logging.getLogger(__name__)
 def candidate_ollama_base_urls(base_url: str) -> list[str]:
     """Return preferred Ollama base URLs to try for a configured endpoint.
 
-    On Windows, ``localhost`` may resolve to IPv6 (::1) while Ollama usually
-    listens on IPv4. Trying ``127.0.0.1`` as a fallback keeps status checks and
-    actual translation requests aligned.
+    On Windows, resolving ``localhost`` can trigger Wi-Fi scanning via the OS
+    network-location service, which causes spurious location permission requests.
+    When the configured URL uses ``localhost``, ``127.0.0.1`` is tried first so
+    that DNS resolution is skipped entirely.  ``localhost`` is kept as a fallback
+    for environments where only that name is routed correctly.
     """
     normalized = base_url.rstrip("/")
-    urls = [normalized]
 
     if "://localhost" in normalized:
-        urls.append(normalized.replace("://localhost", "://127.0.0.1", 1))
+        # Try 127.0.0.1 first to avoid DNS resolution of "localhost".
+        # On Windows, resolving "localhost" can trigger Wi-Fi scanning via the
+        # OS network-location service, which causes spurious location permission
+        # requests. Using the literal IPv4 loopback address bypasses that lookup.
+        ipv4_url = normalized.replace("://localhost", "://127.0.0.1", 1)
+        urls = [ipv4_url, normalized]
+    else:
+        urls = [normalized]
 
     return list(dict.fromkeys(urls))
 

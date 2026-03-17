@@ -211,7 +211,7 @@ def _clean_translation_result(result: Optional[str], original_text: str) -> str:
         Cleaned translation text.
     """
     if result is None:
-        logger.warning(f"Translation returned None for text: {original_text}")
+        logger.warning(f"Translation returned None for text ({len(original_text)} chars), using original")
         return original_text
 
     result = result.strip()
